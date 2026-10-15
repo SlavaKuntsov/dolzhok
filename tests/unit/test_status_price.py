@@ -42,7 +42,7 @@ async def test_change_status_valid_chain() -> None:
     repo, item = await _seed()
     assert item.id is not None
     use_case = ChangeStatusUseCase(repo)
-    for target in (ItemStatus.TO_ORDER, ItemStatus.ORDERED, ItemStatus.RECEIVED):
+    for target in (ItemStatus.ORDERED, ItemStatus.RECEIVED):
         response = await use_case.execute(ChangeStatusRequest(item_id=item.id, target=target))
         assert response.item.status == target
 

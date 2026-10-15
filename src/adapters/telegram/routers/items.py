@@ -12,9 +12,9 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from src.adapters.telegram.cards import format_item_card
+from src.adapters.telegram.cards import card_message
 from src.adapters.telegram.fsm import PriceStates, QtyStates
-from src.adapters.telegram.keyboards import item_keyboard, main_menu_keyboard
+from src.adapters.telegram.keyboards import main_menu_keyboard
 from src.domain import ozon
 from src.domain.entities import ItemStatus
 from src.domain.errors import DomainError
@@ -68,11 +68,7 @@ def build_items_router(settings: Settings) -> Router:
             await message.answer(f"Не получилось: {exc}")
             return
         item = response.item
-        await message.answer(
-            format_item_card(item),
-            reply_markup=item_keyboard(item, for_son=True),
-            disable_web_page_preview=True,
-        )
+        await message.answer(**card_message(item, for_son=True))
 
     @router.message(F.text, ~StateFilter(PriceStates.waiting_price, QtyStates.waiting_qty))
     async def ingest_link(
@@ -116,9 +112,7 @@ def build_items_router(settings: Settings) -> Router:
         item = response.item
         is_son = sender_id == son_id
         await message.answer(
-            f"✅ Сохранено #{item.id}\n\n{format_item_card(item)}",
-            reply_markup=item_keyboard(item, for_son=is_son),
-            disable_web_page_preview=True,
+            **card_message(item, for_son=is_son, prefix=f"✅ Сохранено #{item.id}")
         )
         # Notify the other party so both chats stay in sync.
         other_id = dad_id if is_son else son_id
@@ -126,9 +120,7 @@ def build_items_router(settings: Settings) -> Router:
         try:
             await bot.send_message(
                 other_id,
-                f"🆕 {who} #{item.id}\n\n{format_item_card(item)}",
-                reply_markup=item_keyboard(item, for_son=not is_son),
-                disable_web_page_preview=True,
+                **card_message(item, for_son=not is_son, prefix=f"🆕 {who} #{item.id}"),
             )
         except TelegramBadRequest:
             # No chat yet: the other party never pressed /start.
@@ -207,11 +199,7 @@ def build_items_router(settings: Settings) -> Router:
             return
         await state.clear()
         item = response.item
-        await message.answer(
-            format_item_card(item),
-            reply_markup=item_keyboard(item, for_son=True),
-            disable_web_page_preview=True,
-        )
+        await message.answer(**card_message(item, for_son=True))
 
     @router.message(PriceStates.waiting_price, F.text)
     async def receive_price(
@@ -235,11 +223,7 @@ def build_items_router(settings: Settings) -> Router:
             return
         await state.clear()
         item = response.item
-        await message.answer(
-            format_item_card(item),
-            reply_markup=item_keyboard(item, for_son=True),
-            disable_web_page_preview=True,
-        )
+        await message.answer(**card_message(item, for_son=True))
 
     @router.callback_query(F.data.startswith("st:"), F.from_user.id == son_id)
     async def change_status(callback: CallbackQuery, item_repo: IItemRepository) -> None:
@@ -259,9 +243,7 @@ def build_items_router(settings: Settings) -> Router:
             await callback.answer(str(exc), show_alert=True)
             return
         item = response.item
-        await callback.message.edit_text(
-            format_item_card(item), reply_markup=item_keyboard(item, for_son=True)
-        )
+        await callback.message.edit_text(**card_message(item, for_son=True))
         await callback.answer("Готово ✅")
 
     @router.callback_query(F.data.startswith("st:"))

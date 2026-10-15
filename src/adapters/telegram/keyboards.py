@@ -14,9 +14,8 @@ from src.domain.entities import PIPELINE, Item, ItemStatus
 # Numbered in pipeline order; CANCELLED lives outside the pipeline.
 STATUS_BUTTON_LABEL: dict[ItemStatus, str] = {
     ItemStatus.NEW: "1 🆕 Новое",
-    ItemStatus.TO_ORDER: "2 📝 Заказать",
-    ItemStatus.ORDERED: "3 📦 Заказан",
-    ItemStatus.RECEIVED: "4 ✅ Получен",
+    ItemStatus.ORDERED: "2 📦 Заказан",
+    ItemStatus.RECEIVED: "3 ✅ Получен",
     ItemStatus.CANCELLED: "🚫 Отмена",
 }
 

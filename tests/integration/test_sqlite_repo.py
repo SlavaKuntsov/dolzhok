@@ -30,10 +30,10 @@ async def test_sqlite_roundtrip(tmp_path: Path) -> None:
     fetched = await repo.get_by_id(saved.id)
     assert fetched is not None and fetched.created_by == 7
 
-    fetched.transition(ItemStatus.TO_ORDER)
+    fetched.transition(ItemStatus.ORDERED)
     fetched.set_price(50000)
     updated = await repo.update(fetched)
-    assert updated.status == ItemStatus.TO_ORDER
+    assert updated.status == ItemStatus.ORDERED
     assert updated.price_kop == 50000
 
     recent = await repo.list_recent(limit=10)

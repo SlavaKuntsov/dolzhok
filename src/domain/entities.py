@@ -11,7 +11,6 @@ from src.domain.errors import DomainError
 
 class ItemStatus(StrEnum):
     NEW = "NEW"
-    TO_ORDER = "TO_ORDER"
     ORDERED = "ORDERED"
     RECEIVED = "RECEIVED"
     CANCELLED = "CANCELLED"
@@ -22,10 +21,9 @@ class PaymentType(StrEnum):
     POSTPAID = "POSTPAID"
 
 
-# Main pipeline order (CANCELLED lives outside it). Numbered 1..4 in UI.
+# Main pipeline order (CANCELLED lives outside it). Numbered 1..3 in UI.
 PIPELINE: tuple[ItemStatus, ...] = (
     ItemStatus.NEW,
-    ItemStatus.TO_ORDER,
     ItemStatus.ORDERED,
     ItemStatus.RECEIVED,
 )

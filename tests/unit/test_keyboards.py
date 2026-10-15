@@ -23,14 +23,13 @@ def test_item_keyboard_shows_all_statuses_current_inert() -> None:
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert "noop:1" in payloads  # current NEW is shown but inert
-    assert "st:1:TO_ORDER" in payloads
     assert "st:1:ORDERED" in payloads
     assert "st:1:RECEIVED" in payloads
     assert "st:1:CANCELLED" in payloads
     assert "price:1" in payloads
     assert "qty:1" in payloads
     # Statuses live in their own rows, actions share the last row.
-    assert len(keyboard.inline_keyboard) == 4
+    assert len(keyboard.inline_keyboard) == 3
     last_row = [b.callback_data for b in keyboard.inline_keyboard[-1]]
     assert last_row == ["price:1", "qty:1"]
 
@@ -52,5 +51,5 @@ def test_item_keyboard_hidden_for_dad_and_cancelled() -> None:
     assert item_keyboard(cancelled, for_son=True) is None
 
 
-def test_order_button_says_order() -> None:
-    assert STATUS_BUTTON_LABEL[ItemStatus.TO_ORDER] == "2 📝 Заказать"
+def test_order_button_label() -> None:
+    assert STATUS_BUTTON_LABEL[ItemStatus.ORDERED] == "2 📦 Заказан"
