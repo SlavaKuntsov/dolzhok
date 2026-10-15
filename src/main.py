@@ -14,7 +14,6 @@ from pydantic import ValidationError
 
 from src.adapters.persistence.sqlite_repo import SqliteItemRepository
 from src.adapters.telegram.routers import build_root_router
-from src.adapters.url_resolver import HttpxOzonResolver
 from src.infrastructure.config import get_settings
 from src.infrastructure.db import create_engine, create_session_factory, init_db
 from src.infrastructure.logging import setup_logging
@@ -55,7 +54,6 @@ async def amain() -> None:
     repo = SqliteItemRepository(create_session_factory(engine))
     dispatcher = Dispatcher(storage=MemoryStorage())
     dispatcher["item_repo"] = repo
-    dispatcher["url_resolver"] = HttpxOzonResolver()
     dispatcher["app_settings"] = settings
     dispatcher.include_router(build_root_router(settings))
 

@@ -15,7 +15,7 @@ from src.adapters.telegram.keyboards import item_keyboard, main_menu_keyboard
 from src.domain import ozon
 from src.domain.entities import ItemStatus
 from src.domain.errors import DomainError
-from src.domain.interfaces import IItemRepository, IUrlResolver
+from src.domain.interfaces import IItemRepository
 from src.infrastructure.config import Settings
 from src.use_cases.add_item import AddItemRequest, AddItemUseCase
 from src.use_cases.change_status import ChangeStatusRequest, ChangeStatusUseCase
@@ -35,7 +35,6 @@ def build_items_router(settings: Settings) -> Router:
         message: Message,
         bot: Bot,
         item_repo: IItemRepository,
-        url_resolver: IUrlResolver,
     ) -> None:
         assert message.text is not None
         assert message.from_user is not None
@@ -50,7 +49,7 @@ def build_items_router(settings: Settings) -> Router:
         sender_id = message.from_user.id
         raw_url = urls[0]
         try:
-            response = await AddItemUseCase(item_repo, url_resolver).execute(
+            response = await AddItemUseCase(item_repo).execute(
                 AddItemRequest(
                     raw_url=raw_url,
                     from_user_id=sender_id,

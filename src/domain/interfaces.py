@@ -29,11 +29,3 @@ class IItemRepository(ABC):
     @abstractmethod
     async def update(self, item: Item) -> Item:
         """Persist changes of an existing item."""
-
-
-class IUrlResolver(ABC):
-    """Resolves short links (ozo.ru) to canonical URLs. Network lives here."""
-
-    @abstractmethod
-    async def resolve(self, url: str) -> str:
-        """Follow redirects and return the final URL (or input on failure)."""

@@ -11,7 +11,6 @@ dependencies = [
   "alembic>=1.13",
   "pydantic>=2",
   "pydantic-settings>=2",
-  "httpx>=0.28",
 ]
 
 [dependency-groups]

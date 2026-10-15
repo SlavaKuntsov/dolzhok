@@ -1,4 +1,4 @@
-"""AddItem use case: ingest an Ozon URL with dedup."""
+"""AddItem use case: ingest an Ozon URL as a new item (no dedup, no network)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from src.domain import ozon
 from src.domain.entities import Item
-from src.domain.interfaces import IItemRepository, IUrlResolver
+from src.domain.interfaces import IItemRepository
 
 
 @dataclass(frozen=True)
@@ -22,16 +22,13 @@ class AddItemResponse:
 
 
 class AddItemUseCase:
-    """Normalize URL, resolve short links, always create a new Item(NEW)."""
+    """Normalize URL and always create a new Item(NEW). Short links are kept as-is."""
 
-    def __init__(self, repo: IItemRepository, resolver: IUrlResolver) -> None:
+    def __init__(self, repo: IItemRepository) -> None:
         self._repo = repo
-        self._resolver = resolver
 
     async def execute(self, request: AddItemRequest) -> AddItemResponse:
         url = ozon.normalize_url(request.raw_url)
-        if ozon.is_short_url(url):
-            url = ozon.normalize_url(await self._resolver.resolve(url))
         item = Item(
             url=url, sku=ozon.extract_sku(url), title=request.title, created_by=request.from_user_id
         )

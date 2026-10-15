@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from src.domain.entities import Item
-from src.domain.interfaces import IItemRepository, IUrlResolver
+from src.domain.interfaces import IItemRepository
 
 
 class InMemoryItemRepository(IItemRepository):
@@ -31,13 +31,3 @@ class InMemoryItemRepository(IItemRepository):
         assert item.id is not None
         self._store[item.id] = item
         return item
-
-
-class FakeUrlResolver(IUrlResolver):
-    """Map short URLs to canonical ones; unknown pass through."""
-
-    def __init__(self, mapping: dict[str, str] | None = None) -> None:
-        self._mapping = mapping or {}
-
-    async def resolve(self, url: str) -> str:
-        return self._mapping.get(url, url)

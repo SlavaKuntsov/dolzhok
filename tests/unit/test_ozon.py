@@ -40,19 +40,6 @@ def test_normalize_url() -> None:
     assert ozon.normalize_url("https://ozon.by/t/9oLOYk1") == "https://ozon.by/t/9oLOYk1"
 
 
-@pytest.mark.parametrize(
-    ("url", "expected"),
-    [
-        ("https://ozo.ru/abc", True),
-        ("https://ozon.by/t/9oLOYk1", True),
-        ("https://ozon.ru/t/abc", True),
-        ("https://ozon.ru/product/x-123456789", False),
-    ],
-)
-def test_is_short_url(url: str, expected: bool) -> None:
-    assert ozon.is_short_url(url) is expected
-
-
 def test_normalize_non_ozon_raises() -> None:
     with pytest.raises(DomainError):
         ozon.normalize_url("https://example.com/x")

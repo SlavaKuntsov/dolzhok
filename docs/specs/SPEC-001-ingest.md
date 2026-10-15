@@ -6,9 +6,10 @@ and shows a card to both chats (inline buttons only for son).
 
 ## Flows
 1. Whitelisted user sends message containing an Ozon URL (any locale:
-   `ozon.ru/by/kz/com/uz`, short `ozo.ru`, share `/t/` links). Leading text
+   `ozon.ru/by/kz/com/uz`, short `ozo.ru`, share `/t/` links). Short links are
+   stored as-is (no HTTP resolve — faster and works offline). Leading text
    before the URL is stored as the item title.
-2. Bot normalizes URL (resolve short/share links via HEAD redirect), extracts SKU/slug.
+2. Bot normalizes URL (canonical host, drop tracking query), extracts SKU when present.
 3. Every sent link creates a NEW item, even if the URL already exists
    (duplicates are separate goods, e.g. two identical втулки for different needs).
 4. Else create `Item(NEW, price=None)` → card to sender + copy to the other

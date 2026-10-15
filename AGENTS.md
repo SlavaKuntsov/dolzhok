@@ -54,7 +54,7 @@ infrastructure/ # config, engine/session, logging
 - Whitelist `ALLOWED_USER_IDS={DAD_ID,SON_ID}` в `infrastructure/config.py`. Чужие — игнор + `log.warning`, без ответа (анти-спам).
 - Проверка роли в filter, не в теле хендлера. Кнопки статусов — `F.from_user.id == SON_ID`.
 - Long polling, `offset = last_update_id + 1` после рестарта. Никаких вебхуков на MVP.
-- Ozon-детект: все локали `ozon.(ru|by|kz|com|uz)` + `ozo.ru`; короткие `/t/` и `ozo.ru` — HEAD-redirect резолв; дедуп по нормализованному URL. Текст до ссылки — в `title`.
+- Ozon-детект: все локали `ozon.(ru|by|kz|com|uz)` + `ozo.ru`; короткие `/t/` и `ozo.ru` храним как есть (без HTTP-резолва); дедупа нет, каждая ссылка = отдельный товар. Текст до ссылки — в `title`.
 
 ## 6. Git
 

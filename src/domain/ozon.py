@@ -9,7 +9,6 @@ from src.domain.errors import DomainError
 
 # Ozon storefronts: ru/by/kz/com/uz + short ozo.ru. www./m. prefixes are stripped.
 _HOST_RE = re.compile(r"^(?:www\.|m\.)?(ozon\.(?:ru|by|kz|com|uz)|ozo\.ru)$", re.IGNORECASE)
-_SHORT_HOST = "ozo.ru"
 
 _URL_RE = re.compile(r"https?://[^\s<>\"]+", re.IGNORECASE)
 _SKU_RE = re.compile(r"-(\d{6,})/?$")
@@ -32,16 +31,6 @@ def _canonical_host(url: str) -> str | None:
 def is_ozon_url(url: str) -> bool:
     """Check whether the URL belongs to Ozon (any locale, incl. short links)."""
     return _canonical_host(url) is not None
-
-
-def is_short_url(url: str) -> bool:
-    """Check whether the URL needs HTTP resolve (ozo.ru or /t/ share links)."""
-    host = _canonical_host(url)
-    if host is None:
-        return False
-    if host == _SHORT_HOST:
-        return True
-    return urlparse(url).path.startswith("/t/")
 
 
 def normalize_url(url: str) -> str:
