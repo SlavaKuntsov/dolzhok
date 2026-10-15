@@ -25,3 +25,13 @@ class ItemModel(Base):
     payment: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class RepaymentModel(Base):
+    __tablename__ = "repayments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    amount_kop: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    note: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
