@@ -100,10 +100,16 @@ src/
 - [x] Кнопка товара в списке открывает полную карточку (`view:<id>`).
 - [-] Daily digest — отменен по решению (APScheduler не добавляем).
 
-### P4 — Deploy 24/7 (SPEC-004)
-- `fly launch --no-deploy`, volume `data` 1GB `ams`, `fly secrets set`.
-- Проверка: рестарт → догоняет апдейты < 24ч, БД на месте.
-- README-раздел Deploy + runbook (логи, бэкап `sqlite3 .dump`).
+### P4 — Deploy 24/7 (SPEC-004) ✅ code done
+- [x] `docker-entrypoint.sh`: `alembic upgrade head` против `DATABASE_URL` перед
+  стартом бота; `alembic/env.py` предпочитает env-переменную `alembic.ini`.
+- [x] `Dockerfile`: `uv sync --frozen --no-install-project`, `sqlite3` CLI,
+  `.dockerignore` (без `.env`/`data/`/`.git`).
+- [x] `fly.toml` (volume `data` → `/data`, регион `ams`, `DATABASE_URL`); Makefile
+  `fly-init` / `restore` / `restart`.
+- [x] README-раздел Deploy + runbook (логи, бэкап/restore, догон < 24ч, stamp).
+- [ ] Живой деплой: `make fly-init`, `fly secrets set`, `make deploy` и проверка
+  рестарта (нужен Fly-аккаунт; `flyctl` не в CI).
 
 ## 7. Testing gate
 
@@ -123,6 +129,7 @@ src/
 
 ## 9. Next action
 
-P1, P2 и P3 закрыты. Дальше P4 (`docs/specs/SPEC-004-*.md`): деплой 24/7 на
-Fly.io (volume `/data` 1GB `ams`, `fly secrets set`, README-раздел Deploy +
-runbook: логи, бэкап `sqlite3 .dump`).
+P1–P3 закрыты, P4 (SPEC-004) готов кодом: boot-миграции, Docker/entrypoint,
+`fly.toml`, Makefile-таргеты и runbook. Остался живой деплой на Fly.io
+(`make fly-init` → `fly secrets set` → `make deploy`) и проверка рестарта
+(догон апдейтов < 24ч, БД на месте) — нужен Fly-аккаунт.
