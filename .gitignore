@@ -1,0 +1,14 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite*
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+data/
+.env
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+.DS_Store

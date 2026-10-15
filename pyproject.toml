@@ -1,0 +1,49 @@
+[project]
+name = "tg-bot-dad-ozon"
+version = "0.1.0"
+description = "Telegram bot: dad sends Ozon links, son orders, bot tracks debt"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "aiogram>=3,<4",
+  "sqlalchemy[asyncio]>=2",
+  "aiosqlite>=0.20",
+  "alembic>=1.13",
+  "pydantic>=2",
+  "pydantic-settings>=2",
+  "httpx>=0.28",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.8",
+  "mypy>=1.13",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+explicit_package_bases = true
+
+[tool.alembic]
+script_location = "alembic"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]

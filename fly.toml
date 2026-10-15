@@ -1,0 +1,16 @@
+app = "tg-bot-dad-ozon"
+primary_region = "ams"
+
+[build]
+
+[mounts]
+  source = "data"
+  destination = "/data"
+
+[env]
+  DATABASE_URL = "sqlite+aiosqlite:////data/bot.db"
+  LOG_LEVEL = "INFO"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
