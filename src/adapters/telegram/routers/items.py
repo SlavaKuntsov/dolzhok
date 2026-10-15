@@ -134,9 +134,7 @@ def build_items_router(settings: Settings) -> Router:
         await callback.answer("Количество меняет только сын 😉", show_alert=True)
 
     @router.message(QtyStates.waiting_qty, F.text)
-    async def receive_qty(
-        message: Message, state: FSMContext, item_repo: IItemRepository
-    ) -> None:
+    async def receive_qty(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:
         assert message.text is not None
         data = await state.get_data()
         item_id = int(data["item_id"])

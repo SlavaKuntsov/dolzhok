@@ -32,9 +32,7 @@ def test_format_item_line() -> None:
 
 
 def test_format_item_card_with_qty_and_price() -> None:
-    item = Item(
-        id=4, url="https://ozon.ru/product/x-4", created_by=1, price_kop=129950, qty=2
-    )
+    item = Item(id=4, url="https://ozon.ru/product/x-4", created_by=1, price_kop=129950, qty=2)
     assert "1 299,50 ₽ × 2 = 2 599,00 ₽" in format_item_card(item)
 
 
