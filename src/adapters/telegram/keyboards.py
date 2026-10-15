@@ -24,9 +24,10 @@ STATUS_BUTTON_LABEL: dict[ItemStatus, str] = {
 # Payment only matters once an item is ordered or received.
 PAYMENT_STATUSES: frozenset[ItemStatus] = frozenset({ItemStatus.ORDERED, ItemStatus.RECEIVED})
 
-PAYMENT_BUTTON_LABEL: dict[PaymentType, str] = {
-    PaymentType.PREPAID: "💳 Предоплата",
-    PaymentType.POSTPAID: "💳 Постоплата",
+# Single toggle button: label is the method it switches TO.
+PAYMENT_TOGGLE_LABEL: dict[PaymentType, str] = {
+    PaymentType.PREPAID: "💳 Сменить на предоплату",
+    PaymentType.POSTPAID: "💳 Сменить на постоплату",
 }
 
 BTN_LIST = "📋 Список"
@@ -64,37 +65,33 @@ def _status_button(
     )
 
 
-def _payment_row(item_id: int, *, current: PaymentType | None) -> list[InlineKeyboardButton]:
-    """Prepaid/Postpaid buttons; the current choice is inert (noop)."""
-    row = []
-    for payment in (PaymentType.PREPAID, PaymentType.POSTPAID):
-        if payment is current:
-            row.append(
-                InlineKeyboardButton(
-                    text=f"▪️ {PAYMENT_BUTTON_LABEL[payment]}",
-                    callback_data=f"nooppay:{item_id}",
-                )
-            )
-        else:
-            row.append(
-                InlineKeyboardButton(
-                    text=PAYMENT_BUTTON_LABEL[payment],
-                    callback_data=f"pay:{item_id}:{payment.value}",
-                )
-            )
-    return row
+def _payment_button(item_id: int, *, current: PaymentType) -> InlineKeyboardButton:
+    """One toggle button that switches to the opposite payment method.
+
+    The card already prints the current method (💳 предоплата/постоплата), so the
+    button only offers the other one.
+    """
+    target = (
+        PaymentType.POSTPAID if current is PaymentType.PREPAID else PaymentType.PREPAID
+    )
+    return InlineKeyboardButton(
+        text=PAYMENT_TOGGLE_LABEL[target],
+        callback_data=f"pay:{item_id}:{target.value}",
+    )
 
 
 def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
-    """Build action keyboard. None for dad or cancelled items.
+    """Build action keyboard. None for dad.
 
-    Layout: status rows (two per row, pipeline order), then Price + Qty, then a
-    payment row for ordered/received items. Received items get a reopen button.
+    Layout: for open items — status rows (two per row, pipeline order) then Price
+    + Qty; for closed items (received/cancelled) — a single reopen button back to
+    `ORDERED`. Only `ORDERED` items get the payment toggle row (receiving settles
+    the order, so payment is shown but no longer switchable).
     """
-    if not for_son or item.id is None or item.status == ItemStatus.CANCELLED:
+    if not for_son or item.id is None:
         return None
     rows: list[list[InlineKeyboardButton]] = []
-    if item.status == ItemStatus.RECEIVED:
+    if item.is_closed:
         rows.append(
             [
                 InlineKeyboardButton(
@@ -115,8 +112,8 @@ def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
                 InlineKeyboardButton(text="🔢 Кол-во", callback_data=f"qty:{item.id}"),
             ]
         )
-    if item.status in PAYMENT_STATUSES:
-        rows.append(_payment_row(item.id, current=item.payment))
+    if item.status is ItemStatus.ORDERED:
+        rows.append([_payment_button(item.id, current=item.payment)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

@@ -18,6 +18,10 @@ price, status, payment, date). No new stored state — everything is derived fro
 5. The full card shows: `#id` + pipeline (status), optional title, money line
    with `💳 предоплата`/`💳 постоплата`/`↩️ возврат`, link, and the creation
    date.
+6. Card actions (son): open items get status buttons (current inert) + `✏️ Цена`
+   + `🔢 Кол-во`; `ORDERED` items get the payment toggle; **closed items
+   (`RECEIVED` and `CANCELLED`) get a single `↩️ В работу` button** that returns
+   them to `ORDERED`.
 
 ## Pagination / filtering
 ```
@@ -43,6 +47,8 @@ page_items      = filtered[page*page_size : (page+1)*page_size]   (newest first)
   and no item buttons.
 - Given an item button When tapped Then a full card for that `#id` is sent;
   for son it carries action buttons, for dad it does not.
+- Given a `RECEIVED` or `CANCELLED` item When its card renders for son Then it
+  shows `↩️ В работу`, which moves it back to `ORDERED`.
 - Given any card When rendered Then it contains the pipeline status, money line,
   `🔗` link and `📅 DD.MM.YYYY`.
 - Given a requested page beyond the last When the use case runs Then it clamps

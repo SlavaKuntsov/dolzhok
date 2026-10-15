@@ -7,7 +7,7 @@ from typing import Any
 
 from aiogram.enums import ParseMode
 
-from src.adapters.telegram.keyboards import item_keyboard
+from src.adapters.telegram.keyboards import PAYMENT_STATUSES, item_keyboard
 from src.domain.entities import PIPELINE, Item, ItemStatus, PaymentType
 from src.domain.value_objects import Money
 
@@ -48,7 +48,7 @@ def _pipeline_line(item: Item) -> str:
 def _payment_suffix(item: Item) -> str:
     if item.is_returned:
         return " · ↩️ возврат"
-    if item.payment is not None:
+    if item.status in PAYMENT_STATUSES:
         return f" · {PAYMENT_LABEL[item.payment]}"
     return ""
 

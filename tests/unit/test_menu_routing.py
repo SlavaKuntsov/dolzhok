@@ -90,12 +90,15 @@ async def test_debt_submenu_flow() -> None:
     bot.session = session  # type: ignore[assignment]
 
     try:
-        # Son's submenu offers «Погасить»; dad's does not.
+        # «💰 Долги» opens straight into the debt summary (like «💰 Долг»);
+        # son's submenu offers «Погасить», dad's does not.
         await _feed(dispatcher, bot, session, SON_ID, BTN_DEBTS)
         assert _labels(session) == [BTN_DEBT, BTN_PAYMENTS, BTN_PAY, BTN_BACK]
+        assert "Папа должен" in session.calls[-1].text
 
         await _feed(dispatcher, bot, session, DAD_ID, BTN_DEBTS)
         assert _labels(session) == [BTN_DEBT, BTN_PAYMENTS, BTN_BACK]
+        assert "Папа должен" in session.calls[-1].text
 
         # «💰 Долг» keeps the user in the submenu.
         await _feed(dispatcher, bot, session, DAD_ID, BTN_DEBT)

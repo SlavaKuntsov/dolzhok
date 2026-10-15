@@ -46,7 +46,7 @@ class Item:
     price_kop: int | None = None
     qty: int = 1
     status: ItemStatus = ItemStatus.NEW
-    payment: PaymentType | None = None
+    payment: PaymentType = PaymentType.PREPAID
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:

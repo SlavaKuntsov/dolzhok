@@ -164,12 +164,19 @@ def build_start_router(settings: Settings) -> Router:
         await _render_list(message, item_repo)
 
     @router.message(F.text == BTN_DEBTS)
-    async def btn_debts(message: Message, state: FSMContext) -> None:
+    async def btn_debts(
+        message: Message,
+        state: FSMContext,
+        item_repo: IItemRepository,
+        repayment_repo: IRepaymentRepository,
+    ) -> None:
         await state.clear()
         assert message.from_user is not None
-        await message.answer(
-            "💰 Долги — выбери действие:",
-            reply_markup=debt_menu_keyboard(for_son=message.from_user.id == son_id),
+        await _send_debt(
+            message,
+            item_repo,
+            repayment_repo,
+            for_son=message.from_user.id == son_id,
         )
 
     @router.message(F.text == BTN_BACK)

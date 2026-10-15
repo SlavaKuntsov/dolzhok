@@ -21,7 +21,7 @@ def _to_entity(model: ItemModel) -> Item:
         price_kop=model.price_kop,
         qty=model.qty,
         status=ItemStatus(model.status),
-        payment=PaymentType(model.payment) if model.payment else None,
+        payment=PaymentType(model.payment) if model.payment else PaymentType.PREPAID,
         created_by=model.created_by,
         created_at=model.created_at,
     )

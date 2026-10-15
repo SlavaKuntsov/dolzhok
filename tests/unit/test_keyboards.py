@@ -50,15 +50,15 @@ def test_item_keyboard_shows_all_statuses_current_inert() -> None:
     assert last_row == ["price:1", "qty:1"]
 
 
-def test_received_card_has_reopen_button_and_payment() -> None:
+def test_received_card_has_reopen_button_no_payment_toggle() -> None:
     item = Item(id=2, url="https://ozon.ru/product/x-2", created_by=1, status=ItemStatus.RECEIVED)
     keyboard = item_keyboard(item, for_son=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
-    assert payloads == ["st:2:ORDERED", "pay:2:PREPAID", "pay:2:POSTPAID"]
+    assert payloads == ["st:2:ORDERED"]
 
 
-def test_ordered_card_shows_payment_current_inert() -> None:
+def test_ordered_card_payment_toggle_offers_opposite() -> None:
     item = Item(
         id=3,
         url="https://ozon.ru/product/x-3",
@@ -69,9 +69,25 @@ def test_ordered_card_shows_payment_current_inert() -> None:
     keyboard = item_keyboard(item, for_son=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
-    assert "nooppay:3" in payloads
     assert "pay:3:POSTPAID" in payloads
     assert "pay:3:PREPAID" not in payloads
+    labels = [b.text for row in keyboard.inline_keyboard for b in row]
+    assert "💳 Сменить на постоплату" in labels
+
+
+def test_postpaid_card_payment_toggle_offers_prepaid() -> None:
+    item = Item(
+        id=5,
+        url="https://ozon.ru/product/x-5",
+        created_by=1,
+        status=ItemStatus.ORDERED,
+        payment=PaymentType.POSTPAID,
+    )
+    keyboard = item_keyboard(item, for_son=True)
+    assert keyboard is not None
+    payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
+    assert "pay:5:PREPAID" in payloads
+    assert "pay:5:POSTPAID" not in payloads
 
 
 def test_new_card_has_no_payment_row() -> None:
@@ -82,13 +98,19 @@ def test_new_card_has_no_payment_row() -> None:
     assert not any(str(p).startswith("pay:") for p in payloads)
 
 
-def test_item_keyboard_hidden_for_dad_and_cancelled() -> None:
+def test_item_keyboard_hidden_for_dad() -> None:
     item = Item(id=1, url="https://ozon.ru/product/x-1", created_by=1)
     assert item_keyboard(item, for_son=False) is None
+
+
+def test_cancelled_card_has_reopen_button() -> None:
     cancelled = Item(
         id=2, url="https://ozon.ru/product/x-2", created_by=1, status=ItemStatus.CANCELLED
     )
-    assert item_keyboard(cancelled, for_son=True) is None
+    keyboard = item_keyboard(cancelled, for_son=True)
+    assert keyboard is not None
+    payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
+    assert payloads == ["st:2:ORDERED"]
 
 
 def test_order_button_label() -> None:
