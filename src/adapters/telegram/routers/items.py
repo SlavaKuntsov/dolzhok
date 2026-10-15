@@ -13,7 +13,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from src.adapters.telegram.cards import card_message
-from src.adapters.telegram.fsm import PriceStates, QtyStates
+from src.adapters.telegram.fsm import PriceStates, QtyStates, RepaymentStates
 from src.adapters.telegram.keyboards import main_menu_keyboard
 from src.domain import ozon
 from src.domain.entities import ItemStatus, PaymentType
@@ -71,7 +71,15 @@ def build_items_router(settings: Settings) -> Router:
         item = response.item
         await message.answer(**card_message(item, for_son=True))
 
-    @router.message(F.text, ~StateFilter(PriceStates.waiting_price, QtyStates.waiting_qty))
+    @router.message(
+        F.text,
+        ~StateFilter(
+            PriceStates.waiting_price,
+            QtyStates.waiting_qty,
+            RepaymentStates.waiting_amount,
+            RepaymentStates.waiting_note,
+        ),
+    )
     async def ingest_link(
         message: Message,
         bot: Bot,

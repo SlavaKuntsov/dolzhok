@@ -13,3 +13,10 @@ class QtyStates(StatesGroup):
     """Waiting for son to type the item quantity. State data: {"item_id": int}."""
 
     waiting_qty = State()
+
+
+class RepaymentStates(StatesGroup):
+    """Son records a repayment. State data: {"amount_kop": int}."""
+
+    waiting_amount = State()
+    waiting_note = State()

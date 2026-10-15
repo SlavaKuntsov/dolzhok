@@ -17,10 +17,12 @@ from src.adapters.telegram.keyboards import (
     main_menu_keyboard,
 )
 from src.adapters.telegram.lists import list_page_message
+from src.adapters.telegram.payments import format_debt_text
 from src.domain.entities import ItemStatus
-from src.domain.interfaces import IItemRepository
+from src.domain.interfaces import IItemRepository, IRepaymentRepository
 from src.domain.value_objects import Money
 from src.infrastructure.config import Settings
+from src.use_cases.calc_balance import CalcBalanceUseCase
 from src.use_cases.calc_debt import CalcDebtUseCase
 from src.use_cases.calc_stats import CalcStatsUseCase
 from src.use_cases.list_items import ListItemsRequest, ListItemsUseCase
@@ -76,14 +78,12 @@ async def _list_callback(
     await callback.answer()
 
 
-async def _send_debt(message: Message, item_repo: IItemRepository) -> None:
-    summary = await CalcDebtUseCase(item_repo).execute()
-    debt = Money(summary.debt_kop).format_rub() if summary.debt_count else "0 BYN"
-    lines = [f"💰 Папа должен: {debt} (предоплата, {summary.debt_count} шт)"]
-    if summary.postpaid_count:
-        pending = Money(summary.postpaid_kop).format_rub()
-        lines.append(f"⏳ Ждет постоплаты: {pending} ({summary.postpaid_count} шт)")
-    await message.answer("\n".join(lines), reply_markup=main_menu_keyboard())
+async def _send_debt(
+    message: Message, item_repo: IItemRepository, repayment_repo: IRepaymentRepository
+) -> None:
+    debt = await CalcDebtUseCase(item_repo).execute()
+    balance = await CalcBalanceUseCase(item_repo, repayment_repo).execute()
+    await message.answer(format_debt_text(debt, balance), reply_markup=main_menu_keyboard())
 
 
 async def _send_stats(message: Message, item_repo: IItemRepository) -> None:
@@ -155,14 +155,24 @@ def build_start_router(settings: Settings) -> Router:
         await _render_list(message, item_repo)
 
     @router.message(F.text.startswith("/debt"))
-    async def cmd_debt(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:
+    async def cmd_debt(
+        message: Message,
+        state: FSMContext,
+        item_repo: IItemRepository,
+        repayment_repo: IRepaymentRepository,
+    ) -> None:
         await state.clear()
-        await _send_debt(message, item_repo)
+        await _send_debt(message, item_repo, repayment_repo)
 
     @router.message(F.text == BTN_DEBT)
-    async def btn_debt(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:
+    async def btn_debt(
+        message: Message,
+        state: FSMContext,
+        item_repo: IItemRepository,
+        repayment_repo: IRepaymentRepository,
+    ) -> None:
         await state.clear()
-        await _send_debt(message, item_repo)
+        await _send_debt(message, item_repo, repayment_repo)
 
     @router.message(F.text.startswith("/stats"))
     async def cmd_stats(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:

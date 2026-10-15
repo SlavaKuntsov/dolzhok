@@ -12,6 +12,7 @@ from aiogram.exceptions import TelegramNetworkError, TelegramUnauthorizedError
 from aiogram.fsm.storage.memory import MemoryStorage
 from pydantic import ValidationError
 
+from src.adapters.persistence.repayment_repo import SqliteRepaymentRepository
 from src.adapters.persistence.sqlite_repo import SqliteItemRepository
 from src.adapters.telegram.routers import build_root_router
 from src.infrastructure.config import get_settings
@@ -52,8 +53,10 @@ async def amain() -> None:
     await init_db(engine)
 
     repo = SqliteItemRepository(create_session_factory(engine))
+    repayment_repo = SqliteRepaymentRepository(create_session_factory(engine))
     dispatcher = Dispatcher(storage=MemoryStorage())
     dispatcher["item_repo"] = repo
+    dispatcher["repayment_repo"] = repayment_repo
     dispatcher["app_settings"] = settings
     dispatcher.include_router(build_root_router(settings))
 

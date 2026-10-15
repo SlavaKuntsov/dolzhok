@@ -33,6 +33,8 @@ BTN_LIST = "📋 Список"
 BTN_DEBT = "💰 Долг"
 BTN_STATS = "📊 Статистика"
 BTN_CANCEL = "❌ Отмена"
+BTN_PAY = "💸 Погасить"
+BTN_PAYMENTS = "📜 Погашения"
 
 # List filter buttons: "ALL" plus one per status. Active filter is inert.
 LIST_FILTER_LABEL: dict[str, str] = {
@@ -165,6 +167,7 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=BTN_LIST), KeyboardButton(text=BTN_DEBT)],
+            [KeyboardButton(text=BTN_PAY), KeyboardButton(text=BTN_PAYMENTS)],
             [KeyboardButton(text=BTN_STATS), KeyboardButton(text=BTN_CANCEL)],
         ],
         resize_keyboard=True,
