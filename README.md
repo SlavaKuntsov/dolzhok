@@ -25,25 +25,25 @@ uv run python -m src.main
 |---|---|---|
 | `/start` | все из whitelist | привет + роль |
 | `/list` | оба | карточки последних 10 (у сына — с кнопками управления) |
-| `/debt` | оба | заглушка до P2 (будет: «Папа должен: X ₽, постоплата ждет: Y ₽») |
-| `/stats` | сын | заказано/забрано/отменено/возвраты |
+| `/debt` | оба | «Папа должен: X BYN, постоплата ждет: Y BYN» |
+| `/stats` | оба | заказано/получено/отменено/возвраты |
 
-Инлайн-кнопки под карточкой — только у сына (у папы карточка без кнопок). Чужие апдейты вне whitelist игнорятся без ответа.
+Инлайн-кнопки под карточкой — только у сына (у папы карточка без кнопок). Чужие апдейты вне whitelist игнорятся без ответа. Для `Заказан`/`Получен` сын отмечает оплату кнопками `💳 Предоплата` / `💳 Постоплата`.
 
 ## Формула долга
 
 ```
-долг = Σ price WHERE status IN (ORDERED, RECEIVED)
-       AND payment = PREPAID AND status != CANCELLED
+долг     = Σ (price × qty) WHERE status IN (ORDERED, RECEIVED) AND payment = PREPAID
+постоплата = Σ (price × qty) WHERE status = ORDERED AND payment = POSTPAID
 ```
 
-Отмена после предоплаты в долг не входит, видна в `/stats` как «вернулось».
+Отмена после предоплаты в долг не входит, видна в `/stats` как «возвраты».
 
 ## Структура
 
 ```
 src/domain/         # entities, value objects, IItemRepository (pure)
-src/use_cases/      # add_item, set_price, change_status, calc_debt
+src/use_cases/      # add_item, set_price, set_payment, change_status, calc_debt, calc_stats
 src/adapters/telegram/     # routers, keyboards, fsm
 src/adapters/persistence/  # sqlalchemy models + SqliteItemRepository
 src/infrastructure/ # config, db, logging

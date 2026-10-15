@@ -22,7 +22,7 @@
 
 **Goal (MVP):**
 - Принять Ozon-ссылку от папы, показать сыну карточку с кнопками.
-- Статусы: `NEW → TO_ORDER → ORDERED → RECEIVED | CANCELLED`.
+- Статусы: `NEW → ORDERED → RECEIVED | CANCELLED` (переходы свободные).
 - Оплата: `PREPAID` (оплатил сразу) / `POSTPAID` (постоплата).
 - Команда `/debt`: сколько папа должен (предоплаченное, но не отмененное).
 
@@ -86,11 +86,13 @@ src/
 - [x] Плюс: `change_status` с машиной переходов, `/list`, `/start`, `/cancel`,
   `SqliteItemRepository` + alembic `0001`, `HttpxOzonResolver`.
 
-### P2 — Деньги и статусы (SPEC-002)
-- `change_status` с машиной переходов (невалидный переход = ошибка, не молчание).
-- `payment` при `ORDERED`: `PREPAID | POSTPAID`.
-- `calc_debt` + `/debt`, `/list`, `/stats`.
-- `CANCELLED` после `PREPAID` = «вернулось», в долг не входит (видно в `/stats`).
+### P2 — Деньги и статусы (SPEC-002) ✅ done
+- [x] Статусы: свободные переходы, повтор в тот же статус = ошибка (не молчание).
+- [x] `payment` (`PREPAID | POSTPAID`) кнопками на карточках `ORDERED`/`RECEIVED`.
+- [x] `CalcDebtUseCase` + `/debt`: «Папа должен» (предоплата) и «Ждет постоплаты».
+- [x] `CalcStatsUseCase` + `/stats`: счётчики по статусам + возвраты.
+- [x] `CANCELLED` после `PREPAID` = «вернулось», в долг не входит (видно в `/stats`).
+- [x] Долг/статистика — вычисляемые из `IItemRepository.list_all`, не хранятся.
 
 ### P3 — UX-полировка (SPEC-003)
 - Фильтры списка по статусам, пагинация (по 10).
@@ -120,5 +122,5 @@ src/
 
 ## 9. Next action
 
-Строить P1 по `docs/specs/SPEC-001-ingest.md` вертикальным срезом:
-regex → `AddItemUseCase` + тест → sqlite repo → telegram router → `/debt` заглушка.
+P1 и P2 закрыты. Дальше P3 (`docs/specs/SPEC-003-*.md`): фильтры `/list` по
+статусам + пагинация, подробная карточка (дата), daily digest сыну.
