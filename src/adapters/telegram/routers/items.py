@@ -268,4 +268,8 @@ def build_items_router(settings: Settings) -> Router:
     async def change_status_denied(callback: CallbackQuery) -> None:
         await callback.answer("Статусы меняет только сын 😉", show_alert=True)
 
+    @router.callback_query(F.data.startswith("noop:"))
+    async def noop(callback: CallbackQuery) -> None:
+        await callback.answer("Уже в этом статусе")
+
     return router

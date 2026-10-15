@@ -22,6 +22,15 @@ class PaymentType(StrEnum):
     POSTPAID = "POSTPAID"
 
 
+# Main pipeline order (CANCELLED lives outside it). Numbered 1..4 in UI.
+PIPELINE: tuple[ItemStatus, ...] = (
+    ItemStatus.NEW,
+    ItemStatus.TO_ORDER,
+    ItemStatus.ORDERED,
+    ItemStatus.RECEIVED,
+)
+
+
 def allowed_next(status: ItemStatus) -> frozenset[ItemStatus]:
     """Any other pipeline status is reachable (transitions are free)."""
     return frozenset(s for s in ItemStatus if s != status)

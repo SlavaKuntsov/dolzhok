@@ -28,8 +28,12 @@ and shows a card to both chats (inline buttons only for son).
 - Given message from non-whitelisted user When received Then ignored + `log.warning`, no reply.
 - Given `ozo.ru/abc` or `ozon.by/t/xxx` short link When ingested Then stored as-is (normalized host only).
 - Given same URL twice When ingested Then two items with different `id`.
-- Given son opens a card Then status buttons show every other pipeline
-  status in their own rows (free transitions); same-status press is rejected.
+- Given son opens a card Then all pipeline statuses are shown numbered in
+  their own rows (free transitions); the current one is inert (`noop` toast).
+- Given a received item Then the card has a single `↩️ В работу` button
+  (back to ordered); cancelled items have no buttons.
+- Given any card Then it is compact: one pipeline line with the current step
+  in brackets (`1 новое → 2 [к заказу]`), title, one money+link line.
 - Given son presses `✏️ Цена` When FSM input `«1 299,50»` Then `price_kop=129950`.
 - Given son presses `🔢 Кол-во` When FSM input `«3»` Then `qty=3` (default 1).
 - Given non-son whitelisted user triggers a son-only button When received Then `alert` + no state change.

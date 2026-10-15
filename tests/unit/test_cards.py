@@ -1,42 +1,40 @@
-"""Tests for card rendering (Russian user-facing text)."""
+"""Tests for compact card rendering (Russian user-facing text)."""
 
-from src.adapters.telegram.cards import format_item_card, format_item_line
+from src.adapters.telegram.cards import format_item_card
 from src.domain.entities import Item, ItemStatus
 
 
 def test_format_item_card_new_no_price() -> None:
-    item = Item(id=1, url="https://ozon.ru/product/x-1", sku="123", created_by=1)
-    card = format_item_card(item)
-    assert "#1 🆕 новое" in card
-    assert "https://ozon.ru/product/x-1" in card
-    assert "цены пока нет" in card
-    assert "Артикул 123" in card
+    item = Item(id=1, url="https://ozon.by/t/abc", created_by=1)
+    assert format_item_card(item) == (
+        "#1 · 1 [новое] → 2 к заказу → 3 заказано → 4 получено\n"
+        "💰 цены пока нет · 🔗 https://ozon.by/t/abc"
+    )
 
 
-def test_format_item_card_with_price() -> None:
+def test_format_item_card_with_title_price_qty() -> None:
     item = Item(
         id=2,
-        url="https://ozon.ru/product/x-2",
+        url="https://ozon.by/t/xyz",
         created_by=1,
+        title="Втулка Д16мм",
         price_kop=129950,
+        qty=2,
         status=ItemStatus.ORDERED,
     )
-    card = format_item_card(item)
-    assert "#2 📦 заказано" in card
-    assert "1 299,50 ₽" in card
+    assert format_item_card(item) == (
+        "#2 · 1 новое → 2 к заказу → 3 [заказано] → 4 получено\n"
+        "Втулка Д16мм\n"
+        "💰 1 299,50 ₽ × 2 = 2 599,00 ₽ · 🔗 https://ozon.by/t/xyz"
+    )
 
 
-def test_format_item_line() -> None:
-    item = Item(id=3, url="https://ozon.ru/product/x-3", created_by=1, price_kop=50000)
-    assert format_item_line(item) == "#3 🆕 500,00 ₽ https://ozon.ru/product/x-3"
-
-
-def test_format_item_card_with_qty_and_price() -> None:
-    item = Item(id=4, url="https://ozon.ru/product/x-4", created_by=1, price_kop=129950, qty=2)
-    assert "1 299,50 ₽ × 2 = 2 599,00 ₽" in format_item_card(item)
-
-
-def test_format_item_card_with_qty_no_price() -> None:
+def test_format_item_card_qty_no_price() -> None:
     item = Item(id=5, url="https://ozon.ru/product/x-5", created_by=1, qty=3)
     card = format_item_card(item)
-    assert "🔢 Количество: 3" in card
+    assert "💰 цены пока нет · 🔢 ×3" in card
+
+
+def test_format_item_card_cancelled() -> None:
+    item = Item(id=7, url="https://ozon.ru/product/x-7", created_by=1, status=ItemStatus.CANCELLED)
+    assert format_item_card(item).startswith("#7 · 🚫 отменено\n")

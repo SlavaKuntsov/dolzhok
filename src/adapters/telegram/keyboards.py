@@ -9,13 +9,14 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
-from src.domain.entities import Item, ItemStatus
+from src.domain.entities import PIPELINE, Item, ItemStatus
 
+# Numbered in pipeline order; CANCELLED lives outside the pipeline.
 STATUS_BUTTON_LABEL: dict[ItemStatus, str] = {
-    ItemStatus.NEW: "🆕 Новое",
-    ItemStatus.TO_ORDER: "📝 Заказать",
-    ItemStatus.ORDERED: "📦 Заказан",
-    ItemStatus.RECEIVED: "✅ Получен",
+    ItemStatus.NEW: "1 🆕 Новое",
+    ItemStatus.TO_ORDER: "2 📝 Заказать",
+    ItemStatus.ORDERED: "3 📦 Заказан",
+    ItemStatus.RECEIVED: "4 ✅ Получен",
     ItemStatus.CANCELLED: "🚫 Отмена",
 }
 
@@ -25,28 +26,44 @@ BTN_STATS = "📊 Статистика"
 BTN_CANCEL = "❌ Отмена"
 
 
-def _chunked_statuses(current: ItemStatus) -> list[list[ItemStatus]]:
-    """All other pipeline statuses, two buttons per row."""
-    others = sorted((s for s in ItemStatus if s != current), key=lambda s: s.value)
-    return [others[i : i + 2] for i in range(0, len(others), 2)]
+def _status_button(
+    item_id: int, target: ItemStatus, *, current: ItemStatus
+) -> InlineKeyboardButton:
+    """All statuses stay visible; the current one is inert (noop)."""
+    if target == current:
+        return InlineKeyboardButton(
+            text=f"▪️ {STATUS_BUTTON_LABEL[target]}",
+            callback_data=f"noop:{item_id}",
+        )
+    return InlineKeyboardButton(
+        text=STATUS_BUTTON_LABEL[target],
+        callback_data=f"st:{item_id}:{target.value}",
+    )
 
 
 def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
-    """Build action keyboard. None for dad or closed items.
+    """Build action keyboard. None for dad or cancelled items.
 
-    Layout: separate row(s) of status buttons, then one row with Price + Qty.
+    Layout: status rows (two per row, pipeline order), then Price + Qty.
+    Received items get a single reopen button instead.
     """
-    if not for_son or item.id is None or item.is_closed:
+    if not for_son or item.id is None or item.status == ItemStatus.CANCELLED:
         return None
-    rows: list[list[InlineKeyboardButton]] = [
-        [
-            InlineKeyboardButton(
-                text=STATUS_BUTTON_LABEL[target],
-                callback_data=f"st:{item.id}:{target.value}",
-            )
-            for target in row
-        ]
-        for row in _chunked_statuses(item.status)
+    if item.status == ItemStatus.RECEIVED:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="↩️ В работу",
+                        callback_data=f"st:{item.id}:{ItemStatus.ORDERED.value}",
+                    )
+                ]
+            ]
+        )
+    all_statuses = [*PIPELINE, ItemStatus.CANCELLED]
+    rows = [
+        [_status_button(item.id, target, current=item.status) for target in row]
+        for row in (all_statuses[i : i + 2] for i in range(0, len(all_statuses), 2))
     ]
     rows.append(
         [
