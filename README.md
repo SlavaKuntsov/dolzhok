@@ -3,8 +3,9 @@
 Папа и сын кидают ссылки на Ozon → сын заказывает со своей карты → бот считает, сколько папа должен вернуть.
 
 - Папа и сын: оба шлют ссылки, смотрят `/list`, `/debt`.
-- Сын: кнопки `1 Новое | 2 Заказан | 3 Получен | 🚫 Отмена | ✏️ Цена | 🔢 Кол-во`, команды `/debt /stats`.
-- Кнопки меню: `📋 Список`, `💰 Долг`, `📊 Статистика`, `❌ Отмена` (+ команды `/menu`, `/cancel`).
+- Сын: кнопки `1 Новое | 2 Заказан | 3 Получен | 🚫 Отмена | ✏️ Цена | 🔢 Кол-во`, команды `/debt /stats /pay /payments`.
+- Кнопки меню: `📋 Список`, `💰 Долг`, `💸 Погасить`, `📜 Погашения`, `📊 Статистика`, `❌ Отмена` (+ команды `/menu`, `/cancel`).
+- Погашения: сын вносит `💸 Погасить` (сумма + опц. комментарий), долг уменьшается, лента — в `📜 Погашения` (удаление ошибочной записи с подтверждением).
 
 Бот 24/7 на Fly.io free, БД — SQLite файл (с портом под Turso). MacBook — только разработка.
 
@@ -25,27 +26,32 @@ uv run python -m src.main
 |---|---|---|
 | `/start` | все из whitelist | привет + роль |
 | `/list` | оба | карточки последних 10 (у сына — с кнопками управления) |
-| `/debt` | оба | «Папа должен: X BYN, постоплата ждет: Y BYN» |
+| `/debt` | оба | «Папа должен: X BYN» + «Погашено»/«Остаток» (и «Аванс» при переплате) + постоплата |
 | `/stats` | оба | заказано/получено/отменено/возвраты |
+| `/pay` | сын | внести погашение (FSM: сумма → опц. комментарий) |
+| `/payments` | оба | лента погашений (у сына — 🗑 с подтверждением) |
 
 Инлайн-кнопки под карточкой — только у сына (у папы карточка без кнопок). Чужие апдейты вне whitelist игнорятся без ответа. Для `Заказан`/`Получен` сын отмечает оплату кнопками `💳 Предоплата` / `💳 Постоплата`.
 
 ## Формула долга
 
 ```
-долг     = Σ (price × qty) WHERE status IN (ORDERED, RECEIVED) AND payment = PREPAID
+долг       = Σ (price × qty) WHERE status IN (ORDERED, RECEIVED) AND payment = PREPAID
 постоплата = Σ (price × qty) WHERE status = ORDERED AND payment = POSTPAID
+погашено   = Σ repayment.amount_kop
+остаток    = долг − погашено         # < 0 → «аванс» (переплата)
 ```
 
 Отмена после предоплаты в долг не входит, видна в `/stats` как «возвраты».
+Погашения — отдельный счёт наличных (пул), отмены их не корректируют автоматически.
 
 ## Структура
 
 ```
-src/domain/         # entities, value objects, IItemRepository (pure)
-src/use_cases/      # add_item, set_price, set_payment, change_status, calc_debt, calc_stats
+src/domain/         # entities, value objects, IItemRepository/IRepaymentRepository (pure)
+src/use_cases/      # add_item, set_price, set_payment, change_status, calc_debt, calc_stats, add/list/delete_repayment, calc_balance
 src/adapters/telegram/     # routers, keyboards, fsm
-src/adapters/persistence/  # sqlalchemy models + SqliteItemRepository
+src/adapters/persistence/  # sqlalchemy models + SqliteItem/RepaymentRepository
 src/infrastructure/ # config, db, logging
 docs/specs/         # SPEC-00X на каждую фичу
 ```

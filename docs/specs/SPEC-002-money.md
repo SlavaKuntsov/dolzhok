@@ -12,6 +12,8 @@ running total — `debt` and stats are derived from items on every call.
 2. `/debt` (or `💰 Долг`) shows two numbers:
    - `Папа должен` — prepaid items in `ORDERED`/`RECEIVED` (son paid, dad owes).
    - `Ждет постоплаты` — postpaid items still `ORDERED` (dad pays on receipt).
+   It also shows the running balance after repayments — `Погашено`, `Остаток`
+   and (when overpaid) `Аванс` (see SPEC-005).
 3. `/stats` (or `📊 Статистика`) shows counts per status plus returns.
 4. Cancelling a `PREPAID` item is a refund: it leaves the debt and appears under
    `↩️ Возвраты` in `/stats`. Returns are never part of the debt.
