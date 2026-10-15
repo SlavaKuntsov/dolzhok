@@ -10,8 +10,10 @@ and shows a card to both chats (inline buttons only for son).
 3. If URL already exists (dedup) → reply with existing card `#id`, no new row.
 4. Else create `Item(NEW, price=None)` → card to sender + copy to the other
    party (`🆕 Dad sent #id` / `🆕 Son added #id`).
-5. All user-facing text is Russian. Main commands are reply-keyboard
-   buttons: `📋 Список` (/list), `💰 Долг` (/debt stub until P2).
+5. All user-facing text is Russian. Global actions live in the persistent
+   reply menu: `📋 Список` (/list), `💰 Долг` (/debt stub until P2),
+   `📊 Статистика` (/stats stub until P2), `❌ Отмена` (/cancel, clears FSM).
+   `/menu` re-sends the menu if hidden.
 
 ## Acceptance criteria
 - Given message from non-whitelisted user When received Then ignored + `log.warning`, no reply.

@@ -20,6 +20,8 @@ STATUS_BUTTON_LABEL: dict[ItemStatus, str] = {
 
 BTN_LIST = "📋 Список"
 BTN_DEBT = "💰 Долг"
+BTN_STATS = "📊 Статистика"
+BTN_CANCEL = "❌ Отмена"
 
 
 def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
@@ -41,9 +43,12 @@ def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
 
 
 def main_menu_keyboard() -> ReplyKeyboardMarkup:
-    """Persistent reply menu with commands as buttons."""
+    """Persistent reply menu with all global actions."""
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=BTN_LIST), KeyboardButton(text=BTN_DEBT)]],
+        keyboard=[
+            [KeyboardButton(text=BTN_LIST), KeyboardButton(text=BTN_DEBT)],
+            [KeyboardButton(text=BTN_STATS), KeyboardButton(text=BTN_CANCEL)],
+        ],
         resize_keyboard=True,
         is_persistent=True,
     )

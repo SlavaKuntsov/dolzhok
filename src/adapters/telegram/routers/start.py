@@ -8,7 +8,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from src.adapters.telegram.cards import format_item_line
-from src.adapters.telegram.keyboards import BTN_DEBT, BTN_LIST, main_menu_keyboard
+from src.adapters.telegram.keyboards import (
+    BTN_CANCEL,
+    BTN_DEBT,
+    BTN_LIST,
+    BTN_STATS,
+    main_menu_keyboard,
+)
 from src.domain.interfaces import IItemRepository
 from src.infrastructure.config import Settings
 
@@ -33,6 +39,20 @@ async def _send_debt_stub(message: Message) -> None:
     )
 
 
+async def _send_stats_stub(message: Message) -> None:
+    await message.answer(
+        "📊 Статистика появится в P2 (SPEC-002).", reply_markup=main_menu_keyboard()
+    )
+
+
+async def _cancel_state(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(
+        "Отменено. Пришли ссылку Ozon или нажми кнопку ниже.",
+        reply_markup=main_menu_keyboard(),
+    )
+
+
 def build_start_router(settings: Settings) -> Router:
     router = Router(name="start")
 
@@ -54,11 +74,15 @@ def build_start_router(settings: Settings) -> Router:
 
     @router.message(Command("cancel"))
     async def cmd_cancel(message: Message, state: FSMContext) -> None:
-        await state.clear()
-        await message.answer(
-            "Отменено. Пришли ссылку Ozon или нажми кнопку ниже.",
-            reply_markup=main_menu_keyboard(),
-        )
+        await _cancel_state(message, state)
+
+    @router.message(F.text == BTN_CANCEL)
+    async def btn_cancel(message: Message, state: FSMContext) -> None:
+        await _cancel_state(message, state)
+
+    @router.message(Command("menu"))
+    async def cmd_menu(message: Message) -> None:
+        await message.answer("Меню действий:", reply_markup=main_menu_keyboard())
 
     @router.message(Command("list"))
     async def cmd_list(message: Message, item_repo: IItemRepository) -> None:
@@ -75,5 +99,13 @@ def build_start_router(settings: Settings) -> Router:
     @router.message(F.text == BTN_DEBT)
     async def btn_debt_stub(message: Message) -> None:
         await _send_debt_stub(message)
+
+    @router.message(F.text.startswith("/stats"))
+    async def cmd_stats_stub(message: Message) -> None:
+        await _send_stats_stub(message)
+
+    @router.message(F.text == BTN_STATS)
+    async def btn_stats_stub(message: Message) -> None:
+        await _send_stats_stub(message)
 
     return router
