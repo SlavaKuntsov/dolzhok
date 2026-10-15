@@ -1,20 +1,20 @@
 # SPEC-005 — debt repayment & history (P5)
 
 ## Goal
-Let son record money dad actually hands over, so the outstanding debt shrinks and
+Let executor record money customer actually hands over, so the outstanding debt shrinks and
 there is a visible history of repayments. The debt itself stays **derived** from
 items; the only new stored thing is a ledger of `Repayment` entries. Pool model:
 a repayment reduces the single running balance, it is not tied to specific items.
 
 ## Flows
-1. Son taps `💸 Погасить` (reply menu) or `/pay` → FSM: enter amount
+1. Executor taps `💸 Погасить` (reply menu) or `/pay` → FSM: enter amount
    `«1 299,50»` → optional comment → repayment saved; bot replies with the new
    remaining balance.
-2. `/debt` (`💰 Долг`) shows: `Папа должен` (debt), `Погашено` (Σ repayments),
+2. `/debt` (`💰 Долг`) shows: `Заказчик должен` (debt), `Погашено` (Σ repayments),
    `Остаток` (`debt − repaid`); when overpaid, an `Аванс` / `Переплата` line.
 3. `/payments` (`📜 Погашения`) lists repayments newest-first: `DD.MM.YYYY`,
-   amount, comment, who entered it; each row has `🗑` (son only, with confirm).
-4. Dad sees `/debt` and `/payments` read-only — no buttons, no FSM.
+   amount, comment, who entered it; each row has `🗑` (executor only, with confirm).
+4. Customer sees `/debt` and `/payments` read-only — no buttons, no FSM.
 
 ## Formulas
 ```
@@ -43,13 +43,13 @@ independent cash and are not auto-adjusted by cancellations.
 - Amount parsing reuses the price parser (`«1 299,50» → 129950`).
 
 ## Acceptance criteria
-- Given debt 2 599,00 and son pays 1 000,00 When `/debt` Then `Остаток: 1 599,00`
+- Given debt 2 599,00 and executor pays 1 000,00 When `/debt` Then `Остаток: 1 599,00`
   and `/payments` has one entry.
 - Given debt 2 599,00 and a full payment 2 599,00 When `/debt` Then `Остаток: 0,00`.
 - Given debt 1 000,00 and payment 1 500,00 When `/debt` Then balance `-500,00`
   shown as `Аванс: 500,00` (no negative "долг").
-- Given a repayment When son taps `🗑` and confirms Then it is gone and the balance
-  is restored; dad tapping `🗑` gets an `alert` and no state change.
+- Given a repayment When executor taps `🗑` and confirms Then it is gone and the balance
+  is restored; customer tapping `🗑` gets an `alert` and no state change.
 - Given input `«1 299,50»` When parsed Then `amount_kop = 129950`.
 - Given input `«0»` or empty/garbage When submitted Then an error hint, no record.
 - Given an item without price When computing the balance Then it is skipped.

@@ -32,7 +32,7 @@ def test_debt_text_with_repayments() -> None:
         advance_kop=0,
     )
     text = format_debt_text(debt, balance)
-    assert "💰 Папа должен: 2 599,00 BYN (предоплата, 1 шт)" in text
+    assert "💰 Заказчик должен: 2 599,00 BYN (предоплата, 1 шт)" in text
     assert "💸 Погашено: 1 000,00 BYN (1 шт)" in text
     assert "✅ Остаток: 1 599,00 BYN" in text
     assert "Аванс" not in text
@@ -74,44 +74,48 @@ def _response(*repayments: Repayment) -> ListRepaymentsResponse:
 
 def test_payments_message_renders_newest_first_with_details() -> None:
     response = _response(_repayment(2, 25000, note="второй"), _repayment(1, 100000, by=5))
-    kwargs = payments_message(response, for_son=True, author_names={9: "сын", 5: "папа"})
+    kwargs = payments_message(
+        response, for_executor=True, author_names={9: "исполнитель", 5: "заказчик"}
+    )
     text = kwargs["text"]
     assert "📜 Погашения · всего 2 · 1 250,00 BYN" in text
-    assert "1. 15.10.2026 · 250,00 BYN · «второй» · сын" in text
-    assert "2. 15.10.2026 · 1 000,00 BYN · папа" in text
+    assert "1. 15.10.2026 · 250,00 BYN · «второй» · исполнитель" in text
+    assert "2. 15.10.2026 · 1 000,00 BYN · заказчик" in text
     callbacks = [b.callback_data for row in kwargs["reply_markup"].inline_keyboard for b in row]
     assert callbacks == ["delpay:2", "delpay:1"]
 
 
-def test_payments_message_for_dad_has_no_buttons() -> None:
+def test_payments_message_for_customer_has_no_buttons() -> None:
     kwargs = payments_message(
-        _response(_repayment(1, 100000)), for_son=False, author_names={9: "сын"}
+        _response(_repayment(1, 100000)), for_executor=False, author_names={9: "исполнитель"}
     )
     assert kwargs["reply_markup"] is None
 
 
 def test_payments_message_empty() -> None:
-    kwargs = payments_message(_response(), for_son=True, author_names={9: "сын"})
+    kwargs = payments_message(_response(), for_executor=True, author_names={9: "исполнитель"})
     assert "Пока пусто." in kwargs["text"]
-    # Son gets an empty inline keyboard so a prior message's buttons are cleared.
+    # Executor gets an empty inline keyboard so a prior message's buttons are cleared.
     assert kwargs["reply_markup"] is not None
     assert kwargs["reply_markup"].inline_keyboard == []
 
 
-def test_payments_message_empty_for_dad_has_no_buttons() -> None:
-    kwargs = payments_message(_response(), for_son=False, author_names={9: "сын"})
+def test_payments_message_empty_for_customer_has_no_buttons() -> None:
+    kwargs = payments_message(_response(), for_executor=False, author_names={9: "исполнитель"})
     assert kwargs["reply_markup"] is None
 
 
 def test_payments_note_is_html_escaped() -> None:
     kwargs = payments_message(
-        _response(_repayment(1, 100000, note="<b>x</b>")), for_son=True, author_names={9: "сын"}
+        _response(_repayment(1, 100000, note="<b>x</b>")),
+        for_executor=True,
+        author_names={9: "исполнитель"},
     )
     assert "&lt;b&gt;x&lt;/b&gt;" in kwargs["text"]
 
 
 def test_confirm_message_has_delete_and_cancel() -> None:
-    kwargs = repayment_confirm_message(_repayment(3, 100000, note="заказ"), who="сын")
+    kwargs = repayment_confirm_message(_repayment(3, 100000, note="заказ"), who="исполнитель")
     assert "🗑 Удалить погашение?" in kwargs["text"]
     callbacks = [b.callback_data for row in kwargs["reply_markup"].inline_keyboard for b in row]
     assert callbacks == ["delpayok:3", "delpayno:3"]

@@ -41,7 +41,7 @@ deploy:
 fly-init:
 	fly launch --no-deploy --copy-config
 	fly volumes create data --size 1 --region ams
-	@echo "Next: fly secrets set BOT_TOKEN=... DAD_ID=... SON_ID=...  &&  make deploy"
+	@echo "Next: fly secrets set BOT_TOKEN=... CUSTOMER_ID=... EXECUTOR_ID=...  &&  make deploy"
 
 # Tail production logs on Fly.io
 logs:

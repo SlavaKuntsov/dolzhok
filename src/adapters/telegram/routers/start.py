@@ -86,12 +86,12 @@ async def _send_debt(
     item_repo: IItemRepository,
     repayment_repo: IRepaymentRepository,
     *,
-    for_son: bool,
+    for_executor: bool,
 ) -> None:
     debt = await CalcDebtUseCase(item_repo).execute()
     balance = await CalcBalanceUseCase(item_repo, repayment_repo).execute()
     await message.answer(
-        format_debt_text(debt, balance), reply_markup=debt_menu_keyboard(for_son=for_son)
+        format_debt_text(debt, balance), reply_markup=debt_menu_keyboard(for_executor=for_executor)
     )
 
 
@@ -121,19 +121,19 @@ async def _cancel_state(message: Message, state: FSMContext) -> None:
 
 def build_start_router(settings: Settings) -> Router:
     router = Router(name="start")
-    son_id = settings.son_id
+    executor_id = settings.executor_id
 
     @router.message(CommandStart())
     async def cmd_start(message: Message, state: FSMContext) -> None:
         await state.clear()
         user_id = message.from_user.id if message.from_user else None
         role = (
-            "сын (управляешь заказами)"
-            if user_id == settings.son_id
-            else "папа (присылаешь ссылки)"
+            "исполнитель (управляешь заказами)"
+            if user_id == settings.executor_id
+            else "заказчик (присылаешь ссылки)"
         )
         await message.answer(
-            "👋 Привет! Я семейный трекер заказов Ozon.\n"
+            "👋 Привет! Я «должок» — трекер заказов Ozon.\n"
             f"Твоя роль: {role}.\n\n"
             "Пришли ссылку на товар — я его запомню.\n"
             "Кнопки внизу: список товаров и раздел «Долги».",
@@ -176,7 +176,7 @@ def build_start_router(settings: Settings) -> Router:
             message,
             item_repo,
             repayment_repo,
-            for_son=message.from_user.id == son_id,
+            for_executor=message.from_user.id == executor_id,
         )
 
     @router.message(F.text == BTN_BACK)
@@ -197,7 +197,7 @@ def build_start_router(settings: Settings) -> Router:
             message,
             item_repo,
             repayment_repo,
-            for_son=message.from_user.id == son_id,
+            for_executor=message.from_user.id == executor_id,
         )
 
     @router.message(F.text == BTN_DEBT)
@@ -213,7 +213,7 @@ def build_start_router(settings: Settings) -> Router:
             message,
             item_repo,
             repayment_repo,
-            for_son=message.from_user.id == son_id,
+            for_executor=message.from_user.id == executor_id,
         )
 
     @router.message(F.text.startswith("/stats"))
@@ -268,8 +268,8 @@ def build_start_router(settings: Settings) -> Router:
             await callback.answer("Товар не найден.", show_alert=True)
             return
         await state.clear()
-        for_son = callback.from_user.id == son_id
-        await callback.message.answer(**card_message(item, for_son=for_son))
+        for_executor = callback.from_user.id == executor_id
+        await callback.message.answer(**card_message(item, for_executor=for_executor))
         await callback.answer()
 
     return router

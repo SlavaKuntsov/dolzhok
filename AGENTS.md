@@ -1,4 +1,4 @@
-# AGENTS.md — tg-bot-dad-ozon
+# AGENTS.md — dolzhok
 
 > Инструкция для AI-агентов и людей. Приоритет: рабочее MVP малыми срезами, тесты первыми.
 
@@ -51,8 +51,8 @@ infrastructure/ # config, engine/session, logging
 
 ## 5. Telegram-правила
 
-- Whitelist `ALLOWED_USER_IDS={DAD_ID,SON_ID}` в `infrastructure/config.py`. Чужие — игнор + `log.warning`, без ответа (анти-спам).
-- Проверка роли в filter, не в теле хендлера. Кнопки статусов — `F.from_user.id == SON_ID`.
+- Whitelist `ALLOWED_USER_IDS={CUSTOMER_ID,EXECUTOR_ID}` в `infrastructure/config.py`. Чужие — игнор + `log.warning`, без ответа (анти-спам).
+- Проверка роли в filter, не в теле хендлера. Кнопки статусов — `F.from_user.id == EXECUTOR_ID`.
 - Long polling, `offset = last_update_id + 1` после рестарта. Никаких вебхуков на MVP.
 - Ozon-детект: все локали `ozon.(ru|by|kz|com|uz)` + `ozo.ru`; короткие `/t/` и `ozo.ru` храним как есть (без HTTP-резолва); дедупа нет, каждая ссылка = отдельный товар. Текст до ссылки — в `title`.
 

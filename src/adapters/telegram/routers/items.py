@@ -1,4 +1,4 @@
-"""Item flow: ingest Ozon links, price FSM, status buttons (son only)."""
+"""Item flow: ingest Ozon links, price FSM, status buttons (executor only)."""
 
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ def parse_reply_price(text: str, replied_text: str | None) -> tuple[int, int] | 
 
 def build_items_router(settings: Settings) -> Router:
     router = Router(name="items")
-    son_id = settings.son_id
-    dad_id = settings.dad_id
+    executor_id = settings.executor_id
+    customer_id = settings.customer_id
 
     # NOTE: registered before ingest_link, but ingest_link also excludes
     # waiting states via StateFilter — belt and suspenders against shadowing.
@@ -69,7 +69,7 @@ def build_items_router(settings: Settings) -> Router:
             await message.answer(f"Не получилось: {exc}")
             return
         item = response.item
-        await message.answer(**card_message(item, for_son=True))
+        await message.answer(**card_message(item, for_executor=True))
 
     @router.message(
         F.text,
@@ -119,17 +119,17 @@ def build_items_router(settings: Settings) -> Router:
             await message.answer(f"Не получилось сохранить ссылку: {exc}")
             return
         item = response.item
-        is_son = sender_id == son_id
+        is_executor = sender_id == executor_id
         await message.answer(
-            **card_message(item, for_son=is_son, prefix=f"✅ Сохранено #{item.id}")
+            **card_message(item, for_executor=is_executor, prefix=f"✅ Сохранено #{item.id}")
         )
         # Notify the other party so both chats stay in sync.
-        other_id = dad_id if is_son else son_id
-        who = "Сын добавил" if is_son else "Папа прислал"
+        other_id = customer_id if is_executor else executor_id
+        who = "Исполнитель добавил" if is_executor else "Заказчик прислал"
         try:
             await bot.send_message(
                 other_id,
-                **card_message(item, for_son=not is_son, prefix=f"🆕 {who} #{item.id}"),
+                **card_message(item, for_executor=not is_executor, prefix=f"🆕 {who} #{item.id}"),
             )
         except TelegramBadRequest:
             # No chat yet: the other party never pressed /start.
@@ -138,7 +138,7 @@ def build_items_router(settings: Settings) -> Router:
                 "⚠️ Вторая сторона еще не запустила бота (/start) — копия не доставлена."
             )
 
-    @router.callback_query(F.data.startswith("price:"), F.from_user.id == son_id)
+    @router.callback_query(F.data.startswith("price:"), F.from_user.id == executor_id)
     async def ask_price(
         callback: CallbackQuery, state: FSMContext, item_repo: IItemRepository
     ) -> None:
@@ -164,9 +164,9 @@ def build_items_router(settings: Settings) -> Router:
 
     @router.callback_query(F.data.startswith("price:"))
     async def ask_price_denied(callback: CallbackQuery) -> None:
-        await callback.answer("Цены ставит только сын 😉", show_alert=True)
+        await callback.answer("Цены ставит только исполнитель 😉", show_alert=True)
 
-    @router.callback_query(F.data.startswith("qty:"), F.from_user.id == son_id)
+    @router.callback_query(F.data.startswith("qty:"), F.from_user.id == executor_id)
     async def ask_qty(
         callback: CallbackQuery, state: FSMContext, item_repo: IItemRepository
     ) -> None:
@@ -192,7 +192,7 @@ def build_items_router(settings: Settings) -> Router:
 
     @router.callback_query(F.data.startswith("qty:"))
     async def ask_qty_denied(callback: CallbackQuery) -> None:
-        await callback.answer("Количество меняет только сын 😉", show_alert=True)
+        await callback.answer("Количество меняет только исполнитель 😉", show_alert=True)
 
     @router.message(QtyStates.waiting_qty, F.text)
     async def receive_qty(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:
@@ -208,7 +208,7 @@ def build_items_router(settings: Settings) -> Router:
             return
         await state.clear()
         item = response.item
-        await message.answer(**card_message(item, for_son=True))
+        await message.answer(**card_message(item, for_executor=True))
 
     @router.message(PriceStates.waiting_price, F.text)
     async def receive_price(
@@ -232,9 +232,9 @@ def build_items_router(settings: Settings) -> Router:
             return
         await state.clear()
         item = response.item
-        await message.answer(**card_message(item, for_son=True))
+        await message.answer(**card_message(item, for_executor=True))
 
-    @router.callback_query(F.data.startswith("st:"), F.from_user.id == son_id)
+    @router.callback_query(F.data.startswith("st:"), F.from_user.id == executor_id)
     async def change_status(callback: CallbackQuery, item_repo: IItemRepository) -> None:
         assert callback.data is not None
         if not isinstance(callback.message, Message):
@@ -252,14 +252,14 @@ def build_items_router(settings: Settings) -> Router:
             await callback.answer(str(exc), show_alert=True)
             return
         item = response.item
-        await callback.message.edit_text(**card_message(item, for_son=True))
+        await callback.message.edit_text(**card_message(item, for_executor=True))
         await callback.answer("Готово ✅")
 
     @router.callback_query(F.data.startswith("st:"))
     async def change_status_denied(callback: CallbackQuery) -> None:
-        await callback.answer("Статусы меняет только сын 😉", show_alert=True)
+        await callback.answer("Статусы меняет только исполнитель 😉", show_alert=True)
 
-    @router.callback_query(F.data.startswith("pay:"), F.from_user.id == son_id)
+    @router.callback_query(F.data.startswith("pay:"), F.from_user.id == executor_id)
     async def change_payment(callback: CallbackQuery, item_repo: IItemRepository) -> None:
         assert callback.data is not None
         if not isinstance(callback.message, Message):
@@ -277,12 +277,12 @@ def build_items_router(settings: Settings) -> Router:
             await callback.answer(str(exc), show_alert=True)
             return
         item = response.item
-        await callback.message.edit_text(**card_message(item, for_son=True))
+        await callback.message.edit_text(**card_message(item, for_executor=True))
         await callback.answer("Оплата сохранена ✅")
 
     @router.callback_query(F.data.startswith("pay:"))
     async def change_payment_denied(callback: CallbackQuery) -> None:
-        await callback.answer("Оплату отмечает только сын 😉", show_alert=True)
+        await callback.answer("Оплату отмечает только исполнитель 😉", show_alert=True)
 
     @router.callback_query(F.data.startswith("noop:"))
     async def noop(callback: CallbackQuery) -> None:

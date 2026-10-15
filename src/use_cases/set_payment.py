@@ -1,4 +1,4 @@
-"""SetPayment use case: son marks how an item is paid (prepaid/postpaid)."""
+"""SetPayment use case: executor marks how an item is paid (prepaid/postpaid)."""
 
 from __future__ import annotations
 

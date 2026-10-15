@@ -2,17 +2,17 @@
 
 ## Goal
 Turn tracked links into money: mark `payment` when an item is ordered, then
-compute the debt dad owes son and show per-status stats. Nothing is stored as a
+compute the debt customer owes executor and show per-status stats. Nothing is stored as a
 running total — `debt` and stats are derived from items on every call.
 
 ## Flows
-1. Payment defaults to `PREPAID` when an item is created. Son switches it on an
+1. Payment defaults to `PREPAID` when an item is created. Executor switches it on an
    `ORDERED` card with a **single toggle button** that shows the opposite method
    (`💳 Сменить на постоплату` / `… на предоплату`). Received items show the
    payment read-only (receiving settles the order).
 2. `/debt` (or `💰 Долг` inside the `💰 Долги` submenu) shows two numbers:
-   - `Папа должен` — prepaid items in `ORDERED`/`RECEIVED` (son paid, dad owes).
-   - `Ждет постоплаты` — postpaid items still `ORDERED` (dad pays on receipt).
+   - `Заказчик должен` — prepaid items in `ORDERED`/`RECEIVED` (executor paid, customer owes).
+   - `Ждет постоплаты` — postpaid items still `ORDERED` (customer pays on receipt).
    It also shows the running balance after repayments — `Погашено`, `Остаток`
    and (when overpaid) `Аванс` (see SPEC-005).
 3. `/stats` (or `📊 Статистика`) shows counts per status plus returns.
@@ -28,18 +28,18 @@ returns     = items WHERE status = CANCELLED AND payment = PREPAID
 ```
 
 ## Acceptance criteria
-- Given son presses `2 📦 Заказан` When card rerenders Then a single payment
+- Given executor presses `2 📦 Заказан` When card rerenders Then a single payment
   toggle button appears (default `PREPAID` → offers `💳 Сменить на постоплату`).
 - Given a new item When created Then its `payment` is `PREPAID`.
 - Given payment `PREPAID` on an ordered item with total 2 599 BYN When `/debt` Then
-  `Папа должен: 2 599,00 BYN`.
+  `Заказчик должен: 2 599,00 BYN`.
 - Given a prepaid item is then `CANCELLED` When `/debt` Then it is excluded;
   When `/stats` Then `↩️ Возвраты` counts it and sums its total.
 - Given a postpaid `ORDERED` item When `/debt` Then it shows under `Ждет постоплаты`,
-  not under `Папа должен`.
+  not under `Заказчик должен`.
 - Given an item without price When computing debt Then it is skipped (no crash).
 - Given qty > 1 When computing total Then `price_kop * qty` is used.
-- Given non-son taps a `pay:` button When received Then `alert`, no state change.
+- Given non-executor taps a `pay:` button When received Then `alert`, no state change.
 - Given any card with a payment Then the money line shows `💳 предоплата` /
   `💳 постоплата`; a refunded item shows `↩️ возврат`.
 

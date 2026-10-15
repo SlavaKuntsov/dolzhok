@@ -24,8 +24,8 @@ from src.adapters.telegram.routers import build_root_router
 from src.infrastructure.config import Settings
 from tests.unit.fakes import InMemoryItemRepository, InMemoryRepaymentRepository
 
-SON_ID = 22
-DAD_ID = 11
+EXECUTOR_ID = 22
+CUSTOMER_ID = 11
 _TOKEN = "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 
@@ -53,7 +53,12 @@ class _FakeSession:
 
 
 def _settings() -> Settings:
-    return Settings(bot_token=_TOKEN, dad_id=DAD_ID, son_id=SON_ID, _env_file=None)  # type: ignore[call-arg]
+    return Settings(  # type: ignore[call-arg]
+        bot_token=_TOKEN,
+        customer_id=CUSTOMER_ID,
+        executor_id=EXECUTOR_ID,
+        _env_file=None,
+    )
 
 
 async def _feed(
@@ -91,22 +96,22 @@ async def test_debt_submenu_flow() -> None:
 
     try:
         # «💰 Долги» opens straight into the debt summary (like «💰 Долг»);
-        # son's submenu offers «Погасить», dad's does not.
-        await _feed(dispatcher, bot, session, SON_ID, BTN_DEBTS)
+        # executor's submenu offers «Погасить», customer's does not.
+        await _feed(dispatcher, bot, session, EXECUTOR_ID, BTN_DEBTS)
         assert _labels(session) == [BTN_DEBT, BTN_PAYMENTS, BTN_PAY, BTN_BACK]
-        assert "Папа должен" in session.calls[-1].text
+        assert "Заказчик должен" in session.calls[-1].text
 
-        await _feed(dispatcher, bot, session, DAD_ID, BTN_DEBTS)
+        await _feed(dispatcher, bot, session, CUSTOMER_ID, BTN_DEBTS)
         assert _labels(session) == [BTN_DEBT, BTN_PAYMENTS, BTN_BACK]
-        assert "Папа должен" in session.calls[-1].text
+        assert "Заказчик должен" in session.calls[-1].text
 
         # «💰 Долг» keeps the user in the submenu.
-        await _feed(dispatcher, bot, session, DAD_ID, BTN_DEBT)
+        await _feed(dispatcher, bot, session, CUSTOMER_ID, BTN_DEBT)
         assert _labels(session) == [BTN_DEBT, BTN_PAYMENTS, BTN_BACK]
-        assert "Папа должен" in session.calls[-1].text
+        assert "Заказчик должен" in session.calls[-1].text
 
         # «⬅️ Назад» returns to the main menu (no money buttons there).
-        await _feed(dispatcher, bot, session, SON_ID, BTN_BACK)
+        await _feed(dispatcher, bot, session, EXECUTOR_ID, BTN_BACK)
         assert _labels(session) == ["📋 Список", BTN_DEBTS, "📊 Статистика", "❌ Отмена"]
     finally:
         await session.close()

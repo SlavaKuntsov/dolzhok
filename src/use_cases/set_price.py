@@ -1,4 +1,4 @@
-"""SetPrice use case: son sets item price in kopecks (parsing lives in adapters)."""
+"""SetPrice use case: executor sets item price in kopecks (parsing lives in adapters)."""
 
 from __future__ import annotations
 

@@ -42,7 +42,7 @@ async def amain() -> None:
     except ValidationError as exc:
         print(
             "Invalid config: copy .env.example to .env and fill "
-            f"BOT_TOKEN, DAD_ID, SON_ID.\nDetails: {exc}",
+            f"BOT_TOKEN, CUSTOMER_ID, EXECUTOR_ID.\nDetails: {exc}",
             file=sys.stderr,
         )
         raise SystemExit(2) from exc

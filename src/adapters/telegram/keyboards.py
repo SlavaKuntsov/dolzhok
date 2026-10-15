@@ -1,4 +1,4 @@
-"""Keyboards: inline actions on cards (son only) + main reply menu."""
+"""Keyboards: inline actions on cards (executor only) + main reply menu."""
 
 from __future__ import annotations
 
@@ -71,24 +71,22 @@ def _payment_button(item_id: int, *, current: PaymentType) -> InlineKeyboardButt
     The card already prints the current method (💳 предоплата/постоплата), so the
     button only offers the other one.
     """
-    target = (
-        PaymentType.POSTPAID if current is PaymentType.PREPAID else PaymentType.PREPAID
-    )
+    target = PaymentType.POSTPAID if current is PaymentType.PREPAID else PaymentType.PREPAID
     return InlineKeyboardButton(
         text=PAYMENT_TOGGLE_LABEL[target],
         callback_data=f"pay:{item_id}:{target.value}",
     )
 
 
-def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
-    """Build action keyboard. None for dad.
+def item_keyboard(item: Item, *, for_executor: bool) -> InlineKeyboardMarkup | None:
+    """Build action keyboard. None for customer.
 
     Layout: for open items — status rows (two per row, pipeline order) then Price
     + Qty; for closed items (received/cancelled) — a single reopen button back to
     `ORDERED`. Only `ORDERED` items get the payment toggle row (receiving settles
     the order, so payment is shown but no longer switchable).
     """
-    if not for_son or item.id is None:
+    if not for_executor or item.id is None:
         return None
     rows: list[list[InlineKeyboardButton]] = []
     if item.is_closed:
@@ -174,13 +172,13 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
-def debt_menu_keyboard(*, for_son: bool) -> ReplyKeyboardMarkup:
+def debt_menu_keyboard(*, for_executor: bool) -> ReplyKeyboardMarkup:
     """Submenu for debt/repayments.
 
-    Son gets the «💸 Погасить» entry; dad sees the read-only actions only.
+    Executor gets the «💸 Погасить» entry; customer sees the read-only actions only.
     """
     rows = [[KeyboardButton(text=BTN_DEBT), KeyboardButton(text=BTN_PAYMENTS)]]
-    if for_son:
+    if for_executor:
         rows.append([KeyboardButton(text=BTN_PAY), KeyboardButton(text=BTN_BACK)])
     else:
         rows.append([KeyboardButton(text=BTN_BACK)])

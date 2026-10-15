@@ -36,7 +36,7 @@ def allowed_next(status: ItemStatus) -> frozenset[ItemStatus]:
 
 @dataclass
 class Item:
-    """One Ozon product link tracked between dad and son."""
+    """One Ozon product link tracked between customer and executor."""
 
     url: str
     created_by: int
@@ -97,7 +97,7 @@ NOTE_MAX_LEN = 256
 
 @dataclass
 class Repayment:
-    """One cash transfer from dad to son that shrinks the running balance."""
+    """One cash transfer from customer to executor that shrinks the running balance."""
 
     amount_kop: int
     created_by: int

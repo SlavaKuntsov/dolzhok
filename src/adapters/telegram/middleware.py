@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class WhitelistMiddleware(BaseMiddleware):
-    """Drop updates from users outside the family whitelist."""
+    """Drop updates from users outside the whitelist."""
 
     def __init__(self, allowed_user_ids: frozenset[int]) -> None:
         self._allowed = allowed_user_ids

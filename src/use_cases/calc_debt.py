@@ -1,4 +1,4 @@
-"""CalcDebt use case: derive how much dad owes son (no stored total)."""
+"""CalcDebt use case: derive how much customer owes executor (no stored total)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class CalcDebtResponse:
 
 
 class CalcDebtUseCase:
-    """Prepaid in-work items are dad's debt; postpaid ordered items are pending."""
+    """Prepaid in-work items are customer's debt; postpaid ordered items are pending."""
 
     def __init__(self, repo: IItemRepository) -> None:
         self._repo = repo

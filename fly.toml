@@ -1,6 +1,6 @@
 # Fly.io app config for a single long-polling worker (no HTTP service).
 # Deploy: docs/PLAN.md P4 / docs/specs/SPEC-004-deploy.md / README "Deploy".
-app = "tg-bot-dad-ozon"
+app = "dolzhok"
 primary_region = "ams"
 
 [build]

@@ -1,4 +1,4 @@
-"""DeleteRepayment use case: son removes a mistaken ledger entry."""
+"""DeleteRepayment use case: executor removes a mistaken ledger entry."""
 
 from __future__ import annotations
 

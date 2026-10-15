@@ -22,20 +22,20 @@ def test_main_menu_has_all_actions() -> None:
     assert labels == [BTN_LIST, BTN_DEBTS, BTN_STATS, BTN_CANCEL]
 
 
-def test_debt_submenu_son_has_pay() -> None:
-    labels = [b.text for row in debt_menu_keyboard(for_son=True).keyboard for b in row]
+def test_debt_submenu_executor_has_pay() -> None:
+    labels = [b.text for row in debt_menu_keyboard(for_executor=True).keyboard for b in row]
     assert labels == [BTN_DEBT, BTN_PAYMENTS, BTN_PAY, BTN_BACK]
 
 
-def test_debt_submenu_dad_has_no_pay() -> None:
-    labels = [b.text for row in debt_menu_keyboard(for_son=False).keyboard for b in row]
+def test_debt_submenu_customer_has_no_pay() -> None:
+    labels = [b.text for row in debt_menu_keyboard(for_executor=False).keyboard for b in row]
     assert labels == [BTN_DEBT, BTN_PAYMENTS, BTN_BACK]
     assert BTN_PAY not in labels
 
 
 def test_item_keyboard_shows_all_statuses_current_inert() -> None:
     item = Item(id=1, url="https://ozon.ru/product/x-1", created_by=1)
-    keyboard = item_keyboard(item, for_son=True)
+    keyboard = item_keyboard(item, for_executor=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert "noop:1" in payloads  # current NEW is shown but inert
@@ -52,7 +52,7 @@ def test_item_keyboard_shows_all_statuses_current_inert() -> None:
 
 def test_received_card_has_reopen_button_no_payment_toggle() -> None:
     item = Item(id=2, url="https://ozon.ru/product/x-2", created_by=1, status=ItemStatus.RECEIVED)
-    keyboard = item_keyboard(item, for_son=True)
+    keyboard = item_keyboard(item, for_executor=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert payloads == ["st:2:ORDERED"]
@@ -66,7 +66,7 @@ def test_ordered_card_payment_toggle_offers_opposite() -> None:
         status=ItemStatus.ORDERED,
         payment=PaymentType.PREPAID,
     )
-    keyboard = item_keyboard(item, for_son=True)
+    keyboard = item_keyboard(item, for_executor=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert "pay:3:POSTPAID" in payloads
@@ -83,7 +83,7 @@ def test_postpaid_card_payment_toggle_offers_prepaid() -> None:
         status=ItemStatus.ORDERED,
         payment=PaymentType.POSTPAID,
     )
-    keyboard = item_keyboard(item, for_son=True)
+    keyboard = item_keyboard(item, for_executor=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert "pay:5:PREPAID" in payloads
@@ -92,22 +92,22 @@ def test_postpaid_card_payment_toggle_offers_prepaid() -> None:
 
 def test_new_card_has_no_payment_row() -> None:
     item = Item(id=4, url="https://ozon.ru/product/x-4", created_by=1)
-    keyboard = item_keyboard(item, for_son=True)
+    keyboard = item_keyboard(item, for_executor=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert not any(str(p).startswith("pay:") for p in payloads)
 
 
-def test_item_keyboard_hidden_for_dad() -> None:
+def test_item_keyboard_hidden_for_customer() -> None:
     item = Item(id=1, url="https://ozon.ru/product/x-1", created_by=1)
-    assert item_keyboard(item, for_son=False) is None
+    assert item_keyboard(item, for_executor=False) is None
 
 
 def test_cancelled_card_has_reopen_button() -> None:
     cancelled = Item(
         id=2, url="https://ozon.ru/product/x-2", created_by=1, status=ItemStatus.CANCELLED
     )
-    keyboard = item_keyboard(cancelled, for_son=True)
+    keyboard = item_keyboard(cancelled, for_executor=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert payloads == ["st:2:ORDERED"]

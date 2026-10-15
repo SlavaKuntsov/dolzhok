@@ -1,4 +1,4 @@
-"""SetQuantity use case: son sets item quantity (positive integer)."""
+"""SetQuantity use case: executor sets item quantity (positive integer)."""
 
 from __future__ import annotations
 

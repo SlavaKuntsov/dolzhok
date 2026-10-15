@@ -1,8 +1,8 @@
 # SPEC-001 — ingest Ozon link (P1 MVP)
 
 ## Goal
-Anyone whitelisted (dad or son) sends an Ozon URL, bot stores an `Item(NEW)`
-and shows a card to both chats (inline buttons only for son).
+Anyone whitelisted (customer or executor) sends an Ozon URL, bot stores an `Item(NEW)`
+and shows a card to both chats (inline buttons only for executor).
 
 ## Flows
 1. Whitelisted user sends message containing an Ozon URL (any locale:
@@ -13,8 +13,8 @@ and shows a card to both chats (inline buttons only for son).
 3. Every sent link creates a NEW item, even if the URL already exists
    (duplicates are separate goods, e.g. two identical втулки for different needs).
 4. Else create `Item(NEW, price=None)` → card to sender + copy to the other
-   party (`🆕 Dad sent #id` / `🆕 Son added #id`).
-5. `/list` sends recent items as full cards (inline buttons for son), so any
+   party (`🆕 Заказчик прислал #id` / `🆕 Исполнитель добавил #id`).
+5. `/list` sends recent items as full cards (inline buttons for executor), so any
    in-work item can be managed without scrolling.
 6. Price can be set two ways: `✏️ Цена` button + FSM input, or by replying to
    a card with a price (stateless, survives bot restarts). A bare number with
@@ -28,16 +28,16 @@ and shows a card to both chats (inline buttons only for son).
 - Given message from non-whitelisted user When received Then ignored + `log.warning`, no reply.
 - Given `ozo.ru/abc` or `ozon.by/t/xxx` short link When ingested Then stored as-is (normalized host only).
 - Given same URL twice When ingested Then two items with different `id`.
-- Given son opens a card Then all pipeline statuses are shown numbered in
+- Given executor opens a card Then all pipeline statuses are shown numbered in
   their own rows (free transitions); the current one is inert (`noop` toast).
 - Given a received item Then the card has a single `↩️ В работу` button
   (back to ordered); cancelled items have no buttons.
 - Given any card Then it is compact: one pipeline line with the current step
   in brackets (`1 новое → 2 [к заказу]`), title, one money+link line.
-- Given son presses `✏️ Цена` When FSM input `«1 299,50»` Then `price_kop=129950`.
-- Given son presses `🔢 Кол-во` When FSM input `«3»` Then `qty=3` (default 1).
-- Given non-son whitelisted user triggers a son-only button When received Then `alert` + no state change.
-- Given dad sends a new URL Then son receives a copy; Given son sends Then dad receives a copy.
+- Given executor presses `✏️ Цена` When FSM input `«1 299,50»` Then `price_kop=129950`.
+- Given executor presses `🔢 Кол-во` When FSM input `«3»` Then `qty=3` (default 1).
+- Given non-executor whitelisted user triggers an executor-only button When received Then `alert` + no state change.
+- Given customer sends a new URL Then executor receives a copy; Given executor sends Then customer receives a copy.
 
 ## Out of scope
 Autoparsing price/title from Ozon HTML. Payment/debt (SPEC-002).

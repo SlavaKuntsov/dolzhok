@@ -22,7 +22,8 @@ def _money(kop: int) -> str:
 
 def format_debt_text(debt: CalcDebtResponse, balance: CalcBalanceResponse) -> str:
     """Debt summary: owed, repaid, remaining balance (or advance), postpaid."""
-    lines = [f"💰 Папа должен: {_money(balance.debt_kop)} (предоплата, {balance.debt_count} шт)"]
+    owed = _money(balance.debt_kop)
+    lines = [f"💰 Заказчик должен: {owed} (предоплата, {balance.debt_count} шт)"]
     if balance.repaid_count:
         lines.append(f"💸 Погашено: {_money(balance.repaid_kop)} ({balance.repaid_count} шт)")
     if balance.advance_kop:
@@ -47,17 +48,17 @@ def _repayment_line(index: int, repayment: Repayment, who: str) -> str:
 def payments_message(
     response: ListRepaymentsResponse,
     *,
-    for_son: bool,
+    for_executor: bool,
     author_names: Mapping[int, str],
 ) -> dict[str, Any]:
-    """Ready-to-splat kwargs for the ledger list; son gets a 🗑 per entry.
+    """Ready-to-splat kwargs for the ledger list; executor gets a 🗑 per entry.
 
-    Son always receives an inline keyboard (possibly empty) so that re-rendering
+    Executor always receives an inline keyboard (possibly empty) so that re-rendering
     over a message with delete buttons actually clears them — Telegram keeps the
     old markup when ``reply_markup`` is omitted.
     """
     keyboard: InlineKeyboardMarkup | None = None
-    if for_son:
+    if for_executor:
         rows = [
             [InlineKeyboardButton(text=f"🗑 {_money(r.amount_kop)}", callback_data=f"delpay:{r.id}")]
             for r in response.repayments
@@ -84,7 +85,7 @@ def payments_message(
 
 
 def repayment_confirm_message(repayment: Repayment, *, who: str) -> dict[str, Any]:
-    """Ready-to-splat kwargs asking son to confirm deletion of one entry."""
+    """Ready-to-splat kwargs asking executor to confirm deletion of one entry."""
     date = repayment.created_at.strftime("%d.%m.%Y")
     line = f"{date} · {_money(repayment.amount_kop)} · {who}"
     if repayment.note:

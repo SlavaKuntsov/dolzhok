@@ -14,7 +14,7 @@ class CalcBalanceResponse:
     debt_count: int
     repaid_kop: int
     repaid_count: int
-    balance_kop: int  # debt - repaid; negative means dad overpaid
+    balance_kop: int  # debt - repaid; negative means customer overpaid
     advance_kop: int  # max(0, -balance), shown as "аванс"
 
 

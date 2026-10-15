@@ -1,4 +1,4 @@
-"""AddRepayment use case: son records cash handed over by dad."""
+"""AddRepayment use case: executor records cash handed over by customer."""
 
 from __future__ import annotations
 

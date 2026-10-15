@@ -88,14 +88,14 @@ def item_summary(item: Item) -> str:
     return f"#{item.id} · {STATUS_SHORT[item.status]} · {money}"
 
 
-def card_message(item: Item, *, for_son: bool, prefix: str = "") -> dict[str, Any]:
+def card_message(item: Item, *, for_executor: bool, prefix: str = "") -> dict[str, Any]:
     """Ready-to-splat kwargs for answer/send_message/edit_text with a card."""
     text = format_item_card(item)
     if prefix:
         text = f"{prefix}\n\n{text}"
     return {
         "text": text,
-        "reply_markup": item_keyboard(item, for_son=for_son),
+        "reply_markup": item_keyboard(item, for_executor=for_executor),
         "parse_mode": ParseMode.HTML,
         "disable_web_page_preview": True,
     }

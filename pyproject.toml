@@ -1,7 +1,7 @@
 [project]
-name = "tg-bot-dad-ozon"
+name = "dolzhok"
 version = "0.1.0"
-description = "Telegram bot: dad sends Ozon links, son orders, bot tracks debt"
+description = "Telegram bot: customer sends Ozon links, executor orders, bot tracks debt"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

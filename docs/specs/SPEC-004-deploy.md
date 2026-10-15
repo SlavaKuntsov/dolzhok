@@ -13,7 +13,7 @@ restart, backup/restore) so either party can operate it without guesswork.
   checks or a public port.
 - **Volume.** `fly volumes create data --size 1 --region ams` mounted at `/data`;
   `DATABASE_URL=sqlite+aiosqlite:////data/bot.db` (WAL enabled at startup).
-- **Secrets.** `BOT_TOKEN`, `DAD_ID`, `SON_ID` come from `fly secrets set` (env),
+- **Secrets.** `BOT_TOKEN`, `CUSTOMER_ID`, `EXECUTOR_ID` come from `fly secrets set` (env),
   never from the image. `.env` is not shipped (see `.dockerignore`).
 - **Migrations on boot.** `docker-entrypoint.sh` runs `.venv/bin/alembic upgrade head`
   against `DATABASE_URL`, then `exec`s the bot from the venv (Python is PID 1, so
@@ -26,9 +26,9 @@ restart, backup/restore) so either party can operate it without guesswork.
   queue. Nothing is stored on the client.
 
 ## Flows
-1. First deploy: `fly launch --no-deploy` (uses `Dockerfile`, app `tg-bot-dad-ozon`,
+1. First deploy: `fly launch --no-deploy` (uses `Dockerfile`, app `dolzhok`,
    region `ams`) → `fly volumes create data --size 1 --region ams` →
-   `fly secrets set BOT_TOKEN=... DAD_ID=... SON_ID=...` → `fly deploy`.
+   `fly secrets set BOT_TOKEN=... CUSTOMER_ID=... EXECUTOR_ID=...` → `fly deploy`.
 2. Each boot: entrypoint migrates `/data/bot.db` to head, then starts polling.
 3. Restart/redeploy: same machine, same volume → DB intact, queued updates drained.
 4. Operate: `make logs` (tail), `make backup` (dump to dated `.sql`), `make restore`
@@ -56,4 +56,4 @@ restart, backup/restore) so either party can operate it without guesswork.
 - Turso/libsql migration (separate `IItemRepository` implementation).
 - CI/CD automation, alerting, metrics, horizontal scaling (`min_machines_running`
   stays 1 — SQLite is single-writer).
-- Postgres and multi-family support.
+- Postgres and multi-tenant support.

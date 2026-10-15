@@ -13,12 +13,12 @@ price, status, payment, date). No new stored state — everything is derived fro
    filter is rendered inert. Changing the filter jumps back to page 1.
 3. `◀️` / `▶️` move one page (10 items). Arrows at the ends are inert.
 4. Tapping an item button (`view:<id>`) opens that item's full card
-   (`card_message`) as a new message — with action buttons for son, plain for
-   dad.
+   (`card_message`) as a new message — with action buttons for executor, plain for
+   customer.
 5. The full card shows: `#id` + pipeline (status), optional title, money line
    with `💳 предоплата`/`💳 постоплата`/`↩️ возврат`, link, and the creation
    date.
-6. Card actions (son): open items get status buttons (current inert) + `✏️ Цена`
+6. Card actions (executor): open items get status buttons (current inert) + `✏️ Цена`
    + `🔢 Кол-во`; `ORDERED` items get the payment toggle; **closed items
    (`RECEIVED` and `CANCELLED`) get a single `↩️ В работу` button** that returns
    them to `ORDERED`.
@@ -46,8 +46,8 @@ page_items      = filtered[page*page_size : (page+1)*page_size]   (newest first)
 - Given an empty filter result When the page renders Then a hint line is shown
   and no item buttons.
 - Given an item button When tapped Then a full card for that `#id` is sent;
-  for son it carries action buttons, for dad it does not.
-- Given a `RECEIVED` or `CANCELLED` item When its card renders for son Then it
+  for executor it carries action buttons, for customer it does not.
+- Given a `RECEIVED` or `CANCELLED` item When its card renders for executor Then it
   shows `↩️ В работу`, which moves it back to `ORDERED`.
 - Given any card When rendered Then it contains the pipeline status, money line,
   `🔗` link and `📅 DD.MM.YYYY`.

@@ -1,4 +1,4 @@
-"""Repayment flow: /pay FSM, /payments ledger, delete-with-confirm (son only)."""
+"""Repayment flow: /pay FSM, /payments ledger, delete-with-confirm (executor only)."""
 
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ from src.use_cases.calc_balance import CalcBalanceUseCase
 from src.use_cases.delete_repayment import DeleteRepaymentRequest, DeleteRepaymentUseCase
 from src.use_cases.list_repayments import ListRepaymentsUseCase
 
-_PAY_PROMPT = "💸 Сколько папа отдал? Введи сумму (например, 1 299,50). /cancel — отмена."
-_DENIED = "Погашение вносит только сын 😉"
-_DELETE_DENIED = "Удалять погашения может только сын 😉"
+_PAY_PROMPT = "💸 Сколько заказчик отдал? Введи сумму (например, 1 299,50). /cancel — отмена."
+_DENIED = "Погашение вносит только исполнитель 😉"
+_DELETE_DENIED = "Удалять погашения может только исполнитель 😉"
 
 
 def _author_names(settings: Settings) -> dict[int, str]:
-    return {settings.son_id: "сын", settings.dad_id: "папа"}
+    return {settings.executor_id: "исполнитель", settings.customer_id: "заказчик"}
 
 
 def _balance_tail(balance_kop: int, advance_kop: int) -> str:
@@ -52,7 +52,7 @@ async def _send_ledger(
     await message.answer(
         **payments_message(
             response,
-            for_son=user_id == settings.son_id,
+            for_executor=user_id == settings.executor_id,
             author_names=_author_names(settings),
         )
     )
@@ -60,10 +60,10 @@ async def _send_ledger(
 
 def build_repayments_router(settings: Settings) -> Router:
     router = Router(name="repayments")
-    son_id = settings.son_id
+    executor_id = settings.executor_id
 
     async def begin_pay(message: Message, state: FSMContext) -> None:
-        if message.from_user is None or message.from_user.id != son_id:
+        if message.from_user is None or message.from_user.id != executor_id:
             await message.answer(_DENIED, reply_markup=main_menu_keyboard())
             return
         await state.set_state(RepaymentStates.waiting_amount)
@@ -79,7 +79,7 @@ def build_repayments_router(settings: Settings) -> Router:
     ) -> str:
         await state.clear()
         saved = await AddRepaymentUseCase(repayment_repo).execute(
-            AddRepaymentRequest(amount_kop=amount_kop, created_by=son_id, note=note)
+            AddRepaymentRequest(amount_kop=amount_kop, created_by=executor_id, note=note)
         )
         balance = await CalcBalanceUseCase(item_repo, repayment_repo).execute()
         amount = Money(saved.repayment.amount_kop).format_rub()
@@ -93,7 +93,9 @@ def build_repayments_router(settings: Settings) -> Router:
         response = await ListRepaymentsUseCase(repayment_repo).execute()
         try:
             await callback.message.edit_text(
-                **payments_message(response, for_son=True, author_names=_author_names(settings))
+                **payments_message(
+                    response, for_executor=True, author_names=_author_names(settings)
+                )
             )
         except TelegramBadRequest as exc:
             # Same content as before => Telegram refuses the edit; that's fine.
@@ -160,9 +162,9 @@ def build_repayments_router(settings: Settings) -> Router:
         reply = await save(
             state, item_repo, repayment_repo, amount_kop=int(data["amount_kop"]), note=message.text
         )
-        await message.answer(reply, reply_markup=debt_menu_keyboard(for_son=True))
+        await message.answer(reply, reply_markup=debt_menu_keyboard(for_executor=True))
 
-    @router.callback_query(F.data == "paynonote", F.from_user.id == son_id)
+    @router.callback_query(F.data == "paynonote", F.from_user.id == executor_id)
     async def skip_note(
         callback: CallbackQuery,
         state: FSMContext,
@@ -177,14 +179,14 @@ def build_repayments_router(settings: Settings) -> Router:
             state, item_repo, repayment_repo, amount_kop=int(data["amount_kop"]), note=None
         )
         if isinstance(callback.message, Message):
-            await callback.message.answer(reply, reply_markup=debt_menu_keyboard(for_son=True))
+            await callback.message.answer(reply, reply_markup=debt_menu_keyboard(for_executor=True))
         await callback.answer()
 
     @router.callback_query(F.data == "paynonote")
     async def skip_note_denied(callback: CallbackQuery) -> None:
         await callback.answer(_DENIED, show_alert=True)
 
-    @router.callback_query(F.data.startswith("delpay:"), F.from_user.id == son_id)
+    @router.callback_query(F.data.startswith("delpay:"), F.from_user.id == executor_id)
     async def ask_delete(callback: CallbackQuery, repayment_repo: IRepaymentRepository) -> None:
         assert callback.data is not None
         if not isinstance(callback.message, Message):
@@ -203,7 +205,7 @@ def build_repayments_router(settings: Settings) -> Router:
         await callback.message.edit_text(**repayment_confirm_message(repayment, who=who))
         await callback.answer("Подтверди удаление")
 
-    @router.callback_query(F.data.startswith("delpayok:"), F.from_user.id == son_id)
+    @router.callback_query(F.data.startswith("delpayok:"), F.from_user.id == executor_id)
     async def confirm_delete(callback: CallbackQuery, repayment_repo: IRepaymentRepository) -> None:
         assert callback.data is not None
         if not isinstance(callback.message, Message):
@@ -224,7 +226,7 @@ def build_repayments_router(settings: Settings) -> Router:
         await render_ledger(callback, repayment_repo)
         await callback.answer("Удалено 🗑")
 
-    @router.callback_query(F.data.startswith("delpayno:"), F.from_user.id == son_id)
+    @router.callback_query(F.data.startswith("delpayno:"), F.from_user.id == executor_id)
     async def cancel_delete(callback: CallbackQuery, repayment_repo: IRepaymentRepository) -> None:
         await render_ledger(callback, repayment_repo)
         await callback.answer()
