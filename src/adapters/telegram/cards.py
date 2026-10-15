@@ -14,11 +14,11 @@ STATUS_EMOJI: dict[ItemStatus, str] = {
 }
 
 STATUS_LABEL: dict[ItemStatus, str] = {
-    ItemStatus.NEW: "new",
-    ItemStatus.TO_ORDER: "to order",
-    ItemStatus.ORDERED: "ordered",
-    ItemStatus.RECEIVED: "received",
-    ItemStatus.CANCELLED: "cancelled",
+    ItemStatus.NEW: "новое",
+    ItemStatus.TO_ORDER: "к заказу",
+    ItemStatus.ORDERED: "заказано",
+    ItemStatus.RECEIVED: "получено",
+    ItemStatus.CANCELLED: "отменено",
 }
 
 
@@ -26,10 +26,10 @@ def format_item_card(item: Item) -> str:
     """Full card for a single item message."""
     emoji = STATUS_EMOJI[item.status]
     label = STATUS_LABEL[item.status]
-    price = Money(item.price_kop).format_rub() if item.price_kop is not None else "no price yet"
+    price = Money(item.price_kop).format_rub() if item.price_kop is not None else "цены пока нет"
     lines = [f"#{item.id} {emoji} {label}", "", f"🔗 {item.url}", f"💰 {price}"]
     if item.sku:
-        lines.append(f"🏷 SKU {item.sku}")
+        lines.append(f"🏷 Артикул {item.sku}")
     return "\n".join(lines)
 
 

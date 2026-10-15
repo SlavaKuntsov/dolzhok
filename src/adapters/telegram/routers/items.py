@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery, Message
 
 from src.adapters.telegram.cards import format_item_card
 from src.adapters.telegram.fsm import PriceStates
-from src.adapters.telegram.keyboards import item_keyboard
+from src.adapters.telegram.keyboards import item_keyboard, main_menu_keyboard
 from src.domain import ozon
 from src.domain.entities import ItemStatus
 from src.domain.errors import DomainError
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 def build_items_router(settings: Settings) -> Router:
     router = Router(name="items")
     son_id = settings.son_id
+    dad_id = settings.dad_id
 
     @router.message(F.text)
     async def ingest_link(
@@ -39,25 +40,35 @@ def build_items_router(settings: Settings) -> Router:
         urls = [u for u in ozon.extract_urls(message.text) if ozon.is_ozon_url(u)]
         if not urls:
             if "http" in message.text:
-                await message.answer("I only track Ozon links (ozon.ru / ozo.ru) 🔗")
+                await message.answer(
+                    "Я отслеживаю только ссылки Ozon (ozon.ru / ozo.ru) 🔗",
+                    reply_markup=main_menu_keyboard(),
+                )
             return
+        sender_id = message.from_user.id
         try:
             response = await AddItemUseCase(item_repo, url_resolver).execute(
-                AddItemRequest(raw_url=urls[0], from_user_id=message.from_user.id)
+                AddItemRequest(raw_url=urls[0], from_user_id=sender_id)
             )
         except DomainError as exc:
-            await message.answer(f"Couldn't save this link: {exc}")
+            await message.answer(f"Не получилось сохранить ссылку: {exc}")
             return
         item = response.item
-        if message.from_user.id == son_id:
-            await message.answer(
-                format_item_card(item), reply_markup=item_keyboard(item, for_son=True)
-            )
-            return
-        status = "saved" if response.created else "already tracking"
-        await message.answer(f"Got it, {status} #{item.id} ✅\nSon will take it from here.")
+        is_son = sender_id == son_id
+        header = "✅ Сохранено" if response.created else "ℹ️ Уже отслеживаю"
+        await message.answer(
+            f"{header} #{item.id}\n\n{format_item_card(item)}",
+            reply_markup=item_keyboard(item, for_son=is_son),
+            disable_web_page_preview=True,
+        )
+        # Notify the other party so both chats stay in sync.
+        other_id = dad_id if is_son else son_id
+        who = "Сын добавил" if is_son else "Папа прислал"
         await bot.send_message(
-            son_id, format_item_card(item), reply_markup=item_keyboard(item, for_son=True)
+            other_id,
+            f"🆕 {who} #{item.id}\n\n{format_item_card(item)}",
+            reply_markup=item_keyboard(item, for_son=not is_son),
+            disable_web_page_preview=True,
         )
 
     @router.callback_query(F.data.startswith("price:"), F.from_user.id == son_id)
@@ -66,27 +77,27 @@ def build_items_router(settings: Settings) -> Router:
     ) -> None:
         assert callback.data is not None
         if not isinstance(callback.message, Message):
-            await callback.answer("Message not available.", show_alert=True)
+            await callback.answer("Сообщение недоступно.", show_alert=True)
             return
         try:
             item_id = int(callback.data.split(":")[1])
         except (IndexError, ValueError):
-            await callback.answer("Bad button payload.", show_alert=True)
+            await callback.answer("Битые данные кнопки.", show_alert=True)
             return
         item = await item_repo.get_by_id(item_id)
         if item is None or item.is_closed:
-            await callback.answer("Item not available.", show_alert=True)
+            await callback.answer("Товар недоступен.", show_alert=True)
             return
         await state.set_state(PriceStates.waiting_price)
         await state.update_data(item_id=item_id)
         await callback.message.answer(
-            f"Send the price for #{item_id} (e.g. 1 299,50). /cancel to abort."
+            f"Введи цену для #{item_id} (например, 1 299,50). /cancel — отмена."
         )
         await callback.answer()
 
     @router.callback_query(F.data.startswith("price:"))
     async def ask_price_denied(callback: CallbackQuery) -> None:
-        await callback.answer("Only son can set prices 😉", show_alert=True)
+        await callback.answer("Цены ставит только сын 😉", show_alert=True)
 
     @router.message(PriceStates.waiting_price, F.text)
     async def receive_price(
@@ -100,23 +111,27 @@ def build_items_router(settings: Settings) -> Router:
                 SetPriceRequest(item_id=item_id, price_text=message.text)
             )
         except DomainError as exc:
-            await message.answer(f"That doesn't look like a price: {exc}\nTry again or /cancel.")
+            await message.answer(f"Не похоже на цену: {exc}\nПопробуй еще раз или /cancel.")
             return
         await state.clear()
         item = response.item
-        await message.answer(format_item_card(item), reply_markup=item_keyboard(item, for_son=True))
+        await message.answer(
+            format_item_card(item),
+            reply_markup=item_keyboard(item, for_son=True),
+            disable_web_page_preview=True,
+        )
 
     @router.callback_query(F.data.startswith("st:"), F.from_user.id == son_id)
     async def change_status(callback: CallbackQuery, item_repo: IItemRepository) -> None:
         assert callback.data is not None
         if not isinstance(callback.message, Message):
-            await callback.answer("Message not available.", show_alert=True)
+            await callback.answer("Сообщение недоступно.", show_alert=True)
             return
         try:
             _, raw_id, raw_status = callback.data.split(":")
             request = ChangeStatusRequest(item_id=int(raw_id), target=ItemStatus(raw_status))
         except (ValueError, KeyError):
-            await callback.answer("Bad button payload.", show_alert=True)
+            await callback.answer("Битые данные кнопки.", show_alert=True)
             return
         try:
             response = await ChangeStatusUseCase(item_repo).execute(request)
@@ -127,10 +142,10 @@ def build_items_router(settings: Settings) -> Router:
         await callback.message.edit_text(
             format_item_card(item), reply_markup=item_keyboard(item, for_son=True)
         )
-        await callback.answer("Updated ✅")
+        await callback.answer("Готово ✅")
 
     @router.callback_query(F.data.startswith("st:"))
     async def change_status_denied(callback: CallbackQuery) -> None:
-        await callback.answer("Only son can change statuses 😉", show_alert=True)
+        await callback.answer("Статусы меняет только сын 😉", show_alert=True)
 
     return router

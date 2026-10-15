@@ -1,17 +1,25 @@
-"""Inline keyboards for item cards. Son-only actions."""
+"""Keyboards: inline actions on cards (son only) + main reply menu."""
 
 from __future__ import annotations
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
 from src.domain.entities import Item, ItemStatus, allowed_next
 
 STATUS_BUTTON_LABEL: dict[ItemStatus, str] = {
-    ItemStatus.TO_ORDER: "📝 To order",
-    ItemStatus.ORDERED: "📦 Ordered",
-    ItemStatus.RECEIVED: "✅ Received",
-    ItemStatus.CANCELLED: "🚫 Cancel",
+    ItemStatus.TO_ORDER: "📝 К заказу",
+    ItemStatus.ORDERED: "📦 Заказан",
+    ItemStatus.RECEIVED: "✅ Получен",
+    ItemStatus.CANCELLED: "🚫 Отмена",
 }
+
+BTN_LIST = "📋 Список"
+BTN_DEBT = "💰 Долг"
 
 
 def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
@@ -28,5 +36,14 @@ def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
     ]
     if status_row:
         rows.append(status_row)
-    rows.append([InlineKeyboardButton(text="✏️ Price", callback_data=f"price:{item.id}")])
+    rows.append([InlineKeyboardButton(text="✏️ Цена", callback_data=f"price:{item.id}")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def main_menu_keyboard() -> ReplyKeyboardMarkup:
+    """Persistent reply menu with commands as buttons."""
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=BTN_LIST), KeyboardButton(text=BTN_DEBT)]],
+        resize_keyboard=True,
+        is_persistent=True,
+    )

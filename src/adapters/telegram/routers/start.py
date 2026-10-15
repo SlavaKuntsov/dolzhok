@@ -1,4 +1,4 @@
-"""Basic commands: /start, /list, /cancel."""
+"""Basic commands: /start, /list, /cancel + reply-menu buttons."""
 
 from __future__ import annotations
 
@@ -8,8 +8,29 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from src.adapters.telegram.cards import format_item_line
+from src.adapters.telegram.keyboards import BTN_DEBT, BTN_LIST, main_menu_keyboard
 from src.domain.interfaces import IItemRepository
 from src.infrastructure.config import Settings
+
+
+async def _send_list(message: Message, item_repo: IItemRepository) -> None:
+    items = await item_repo.list_recent(limit=10)
+    if not items:
+        await message.answer(
+            "Пока пусто. Пришли ссылку на Ozon, чтобы начать.", reply_markup=main_menu_keyboard()
+        )
+        return
+    await message.answer(
+        "\n".join(format_item_line(item) for item in items),
+        reply_markup=main_menu_keyboard(),
+        disable_web_page_preview=True,
+    )
+
+
+async def _send_debt_stub(message: Message) -> None:
+    await message.answer(
+        "💰 Подсчет долга появится в P2 (SPEC-002).", reply_markup=main_menu_keyboard()
+    )
 
 
 def build_start_router(settings: Settings) -> Router:
@@ -18,29 +39,41 @@ def build_start_router(settings: Settings) -> Router:
     @router.message(CommandStart())
     async def cmd_start(message: Message) -> None:
         user_id = message.from_user.id if message.from_user else None
-        role = "son (manager)" if user_id == settings.son_id else "dad (sender)"
+        role = (
+            "сын (управляешь заказами)"
+            if user_id == settings.son_id
+            else "папа (присылаешь ссылки)"
+        )
         await message.answer(
-            "👋 Hi! I'm the family Ozon tracker.\n"
-            f"Your role: {role}.\n\n"
-            "Send an Ozon link and I'll track it.\n"
-            "Commands: /list — recent items."
+            "👋 Привет! Я семейный трекер заказов Ozon.\n"
+            f"Твоя роль: {role}.\n\n"
+            "Пришли ссылку на товар — я его запомню.\n"
+            "Кнопки внизу: список товаров и долг.",
+            reply_markup=main_menu_keyboard(),
         )
 
     @router.message(Command("cancel"))
     async def cmd_cancel(message: Message, state: FSMContext) -> None:
         await state.clear()
-        await message.answer("Cancelled. Send an Ozon link or use /list.")
+        await message.answer(
+            "Отменено. Пришли ссылку Ozon или нажми кнопку ниже.",
+            reply_markup=main_menu_keyboard(),
+        )
 
     @router.message(Command("list"))
     async def cmd_list(message: Message, item_repo: IItemRepository) -> None:
-        items = await item_repo.list_recent(limit=10)
-        if not items:
-            await message.answer("No items yet. Send an Ozon link to start.")
-            return
-        await message.answer("\n".join(format_item_line(item) for item in items))
+        await _send_list(message, item_repo)
+
+    @router.message(F.text == BTN_LIST)
+    async def btn_list(message: Message, item_repo: IItemRepository) -> None:
+        await _send_list(message, item_repo)
 
     @router.message(F.text.startswith("/debt"))
     async def cmd_debt_stub(message: Message) -> None:
-        await message.answer("💰 Debt calculation lands in P2 (SPEC-002).")
+        await _send_debt_stub(message)
+
+    @router.message(F.text == BTN_DEBT)
+    async def btn_debt_stub(message: Message) -> None:
+        await _send_debt_stub(message)
 
     return router
