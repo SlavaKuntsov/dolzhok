@@ -6,9 +6,10 @@ compute the debt dad owes son and show per-status stats. Nothing is stored as a
 running total — `debt` and stats are derived from items on every call.
 
 ## Flows
-1. Son sets payment on an item in work (`ORDERED` or `RECEIVED`) via inline
-   buttons `💳 Предоплата` / `💳 Постоплата` (the current choice is inert).
-   Payment may be (re)set on received items too.
+1. Payment defaults to `PREPAID` when an item is created. Son switches it on an
+   `ORDERED` card with a **single toggle button** that shows the opposite method
+   (`💳 Сменить на постоплату` / `… на предоплату`). Received items show the
+   payment read-only (receiving settles the order).
 2. `/debt` (or `💰 Долг` inside the `💰 Долги` submenu) shows two numbers:
    - `Папа должен` — prepaid items in `ORDERED`/`RECEIVED` (son paid, dad owes).
    - `Ждет постоплаты` — postpaid items still `ORDERED` (dad pays on receipt).
@@ -27,7 +28,9 @@ returns     = items WHERE status = CANCELLED AND payment = PREPAID
 ```
 
 ## Acceptance criteria
-- Given son presses `2 📦 Заказан` When card rerenders Then payment buttons appear.
+- Given son presses `2 📦 Заказан` When card rerenders Then a single payment
+  toggle button appears (default `PREPAID` → offers `💳 Сменить на постоплату`).
+- Given a new item When created Then its `payment` is `PREPAID`.
 - Given payment `PREPAID` on an ordered item with total 2 599 BYN When `/debt` Then
   `Папа должен: 2 599,00 BYN`.
 - Given a prepaid item is then `CANCELLED` When `/debt` Then it is excluded;

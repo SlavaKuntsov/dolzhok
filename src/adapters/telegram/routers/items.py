@@ -288,8 +288,4 @@ def build_items_router(settings: Settings) -> Router:
     async def noop(callback: CallbackQuery) -> None:
         await callback.answer("Уже в этом статусе")
 
-    @router.callback_query(F.data.startswith("nooppay:"))
-    async def noop_payment(callback: CallbackQuery) -> None:
-        await callback.answer("Уже выбрано")
-
     return router

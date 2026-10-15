@@ -31,7 +31,7 @@ def test_format_item_card_with_title_price_qty() -> None:
     assert format_item_card(item) == (
         "#2 · 1 новое → 2 <b><u>заказано</u></b> → 3 получено\n"
         "Втулка Д16мм\n"
-        "💰 1 299,50 BYN × 2 = 2 599,00 BYN\n"
+        "💰 1 299,50 BYN × 2 = 2 599,00 BYN · 💳 предоплата\n"
         "🔗 https://ozon.by/t/xyz · 📅 15.10.2026"
     )
 
