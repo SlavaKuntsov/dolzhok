@@ -75,13 +75,15 @@ src/
 - [x] `Dockerfile`, `fly.toml`, `alembic.ini` placeholder
 - [ ] `uv sync` зеленый, `pytest -q` зеленый (пустой)
 
-### P1 — MVP прием ссылок (SPEC-001)
-- `add_item`: regex Ozon (`ozon.ru`, `ozo.ru` + HEAD-redirect для коротких),
+### P1 — MVP прием ссылок (SPEC-001) ✅ done
+- [x] `add_item`: regex Ozon (`ozon.ru`, `ozo.ru` + HEAD-redirect для коротких),
   дедуплика по нормализованному URL/SKU.
-- Карточка `#id NEW` папе (подтверждение) + сыну (кнопки).
-- Whitelist: отвечать только `DAD_ID`, `SON_ID`, остальных игнорить + лог.
-- FSM «ввод цены»: сын жмет `✏️ Цена` → бот ждет число → `set_price`.
-- Фильтры ролей: кнопки статусов — только сын (callback answer + alert).
+- [x] Карточка `#id NEW` папе (подтверждение) + сыну (кнопки).
+- [x] Whitelist: отвечать только `DAD_ID`, `SON_ID`, остальных игнорить + лог.
+- [x] FSM «ввод цены»: сын жмет `✏️ Цена` → бот ждет число → `set_price`.
+- [x] Фильтры ролей: кнопки статусов — только сын (callback answer + alert).
+- [x] Плюс: `change_status` с машиной переходов, `/list`, `/start`, `/cancel`,
+  `SqliteItemRepository` + alembic `0001`, `HttpxOzonResolver`.
 
 ### P2 — Деньги и статусы (SPEC-002)
 - `change_status` с машиной переходов (невалидный переход = ошибка, не молчание).

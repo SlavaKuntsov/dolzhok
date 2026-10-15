@@ -9,6 +9,4 @@ __pycache__/
 *.sqlite-shm
 data/
 .env
-alembic/versions/*.py
-!alembic/versions/.gitkeep
 .DS_Store
