@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from src.domain.entities import Item
-from src.domain.interfaces import IItemRepository
+from src.domain.entities import Item, Repayment
+from src.domain.interfaces import IItemRepository, IRepaymentRepository
 
 
 class InMemoryItemRepository(IItemRepository):
@@ -33,3 +33,21 @@ class InMemoryItemRepository(IItemRepository):
         assert item.id is not None
         self._store[item.id] = item
         return item
+
+
+class InMemoryRepaymentRepository(IRepaymentRepository):
+    def __init__(self) -> None:
+        self._store: dict[int, Repayment] = {}
+        self._seq = 0
+
+    async def add(self, repayment: Repayment) -> Repayment:
+        self._seq += 1
+        repayment.id = self._seq
+        self._store[repayment.id] = repayment
+        return repayment
+
+    async def list_all(self) -> list[Repayment]:
+        return sorted(self._store.values(), key=lambda r: r.id or 0, reverse=True)
+
+    async def delete(self, repayment_id: int) -> bool:
+        return self._store.pop(repayment_id, None) is not None

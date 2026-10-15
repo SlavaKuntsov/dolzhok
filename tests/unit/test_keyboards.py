@@ -4,6 +4,8 @@ from src.adapters.telegram.keyboards import (
     BTN_CANCEL,
     BTN_DEBT,
     BTN_LIST,
+    BTN_PAY,
+    BTN_PAYMENTS,
     BTN_STATS,
     STATUS_BUTTON_LABEL,
     item_keyboard,
@@ -14,7 +16,7 @@ from src.domain.entities import Item, ItemStatus, PaymentType
 
 def test_main_menu_has_all_actions() -> None:
     labels = [b.text for row in main_menu_keyboard().keyboard for b in row]
-    assert labels == [BTN_LIST, BTN_DEBT, BTN_STATS, BTN_CANCEL]
+    assert labels == [BTN_LIST, BTN_DEBT, BTN_PAY, BTN_PAYMENTS, BTN_STATS, BTN_CANCEL]
 
 
 def test_item_keyboard_shows_all_statuses_current_inert() -> None:
