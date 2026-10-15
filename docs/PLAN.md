@@ -74,7 +74,7 @@ src/
 - [x] `pyproject`, `.python-version`, `.env.example`, `.gitignore`
 - [x] Скелет `src/`, `AGENTS.md`, `README.md`, `docs/PLAN.md`
 - [x] `Dockerfile`, `fly.toml`, `alembic.ini` placeholder
-- [ ] `uv sync` зеленый, `pytest -q` зеленый (пустой)
+- [x] `uv sync` зеленый, `pytest -q` зеленый (пустой)
 
 ### P1 — MVP прием ссылок (SPEC-001) ✅ done
 - [x] `add_item`: regex Ozon (`ozon.ru`, `ozo.ru` + HEAD-redirect для коротких),
