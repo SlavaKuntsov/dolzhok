@@ -20,7 +20,7 @@ STATUS_LABEL: dict[ItemStatus, str] = {
 
 
 def _pipeline_line(item: Item) -> str:
-    """One-line pipeline with the current step bold, e.g. 1 новое → 2 <b>заказано</b>."""
+    """One-line pipeline with the current step bold+underline."""
     if item.status == ItemStatus.CANCELLED:
         return "🚫 отменено"
     parts = []

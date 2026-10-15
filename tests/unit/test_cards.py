@@ -7,7 +7,7 @@ from src.domain.entities import Item, ItemStatus
 def test_format_item_card_new_no_price() -> None:
     item = Item(id=1, url="https://ozon.by/t/abc", created_by=1)
     assert format_item_card(item) == (
-        "#1 · 1 <b>новое</b> → 2 заказано → 3 получено\n💰 цены пока нет · 🔗 https://ozon.by/t/abc"
+        "#1 · 1 <b><u>новое</u></b> → 2 заказано → 3 получено\n💰 цены пока нет · 🔗 https://ozon.by/t/abc"
     )
 
 
@@ -22,7 +22,7 @@ def test_format_item_card_with_title_price_qty() -> None:
         status=ItemStatus.ORDERED,
     )
     assert format_item_card(item) == (
-        "#2 · 1 новое → 2 <b>заказано</b> → 3 получено\n"
+        "#2 · 1 новое → 2 <b><u>заказано</u></b> → 3 получено\n"
         "Втулка Д16мм\n"
         "💰 1 299,50 ₽ × 2 = 2 599,00 ₽ · 🔗 https://ozon.by/t/xyz"
     )
