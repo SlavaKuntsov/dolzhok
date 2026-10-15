@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -31,6 +33,15 @@ BTN_LIST = "📋 Список"
 BTN_DEBT = "💰 Долг"
 BTN_STATS = "📊 Статистика"
 BTN_CANCEL = "❌ Отмена"
+
+# List filter buttons: "ALL" plus one per status. Active filter is inert.
+LIST_FILTER_LABEL: dict[str, str] = {
+    "ALL": "Все",
+    ItemStatus.NEW.value: "🆕",
+    ItemStatus.ORDERED.value: "📦",
+    ItemStatus.RECEIVED.value: "✅",
+    ItemStatus.CANCELLED.value: "🚫",
+}
 
 
 def _status_button(
@@ -101,6 +112,51 @@ def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
         )
     if item.status in PAYMENT_STATUSES:
         rows.append(_payment_row(item.id, current=item.payment))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def list_keyboard(
+    *,
+    status: ItemStatus | None,
+    page: int,
+    pages: int,
+    item_buttons: Sequence[tuple[int, str]],
+) -> InlineKeyboardMarkup:
+    """Inline keyboard for one list page: filters, items, prev/next.
+
+    `item_buttons` are `(item_id, label)` pairs; tapping runs `view:<id>`.
+    The active filter and out-of-range arrows are inert (`nooplist:`).
+    """
+    current = status.value if status is not None else "ALL"
+    filter_row = [
+        InlineKeyboardButton(
+            text=f"▪️ {label}" if value == current else label,
+            callback_data=f"nooplist:{value}" if value == current else f"lf:{value}",
+        )
+        for value, label in LIST_FILTER_LABEL.items()
+    ]
+    rows: list[list[InlineKeyboardButton]] = [filter_row]
+    rows += [
+        [InlineKeyboardButton(text=label, callback_data=f"view:{item_id}")]
+        for item_id, label in item_buttons
+    ]
+    prev_page = (
+        InlineKeyboardButton(text="◀️", callback_data=f"lp:{current}:{page - 1}")
+        if page > 0
+        else InlineKeyboardButton(text="◀️", callback_data="nooplist:page")
+    )
+    next_page = (
+        InlineKeyboardButton(text="▶️", callback_data=f"lp:{current}:{page + 1}")
+        if page < pages - 1
+        else InlineKeyboardButton(text="▶️", callback_data="nooplist:page")
+    )
+    rows.append(
+        [
+            prev_page,
+            InlineKeyboardButton(text=f"{page + 1}/{pages}", callback_data="nooplist:page"),
+            next_page,
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
