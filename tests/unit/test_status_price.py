@@ -19,22 +19,22 @@ async def test_set_price_ok() -> None:
     repo, item = await _seed()
     assert item.id is not None
     response = await SetPriceUseCase(repo).execute(
-        SetPriceRequest(item_id=item.id, price_text="1 299,50")
+        SetPriceRequest(item_id=item.id, price_kop=129950)
     )
     assert response.item.price_kop == 129950
 
 
-async def test_set_price_bad_format() -> None:
+async def test_set_price_negative_rejected() -> None:
     repo, item = await _seed()
     assert item.id is not None
     with pytest.raises(DomainError):
-        await SetPriceUseCase(repo).execute(SetPriceRequest(item_id=item.id, price_text="abc"))
+        await SetPriceUseCase(repo).execute(SetPriceRequest(item_id=item.id, price_kop=-5))
 
 
 async def test_set_price_missing_item() -> None:
     with pytest.raises(DomainError):
         await SetPriceUseCase(InMemoryItemRepository()).execute(
-            SetPriceRequest(item_id=999, price_text="100")
+            SetPriceRequest(item_id=999, price_kop=10000)
         )
 
 

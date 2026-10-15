@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from aiogram import Bot, F, Router
+from aiogram.dispatcher.event.bases import SkipHandler
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -16,6 +18,7 @@ from src.domain import ozon
 from src.domain.entities import ItemStatus
 from src.domain.errors import DomainError
 from src.domain.interfaces import IItemRepository
+from src.domain.value_objects import parse_price_to_kop
 from src.infrastructure.config import Settings
 from src.use_cases.add_item import AddItemRequest, AddItemUseCase
 from src.use_cases.change_status import ChangeStatusRequest, ChangeStatusUseCase
@@ -24,11 +27,49 @@ from src.use_cases.set_quantity import SetQuantityRequest, SetQuantityUseCase
 
 logger = logging.getLogger(__name__)
 
+_CARD_ID_RE = re.compile(r"#(\d+)")
+
+
+def parse_reply_price(text: str, replied_text: str | None) -> tuple[int, int] | None:
+    """Stateless price set: reply to a card with a price. Returns (item_id, kop)."""
+    if not replied_text:
+        return None
+    match = _CARD_ID_RE.search(replied_text)
+    if not match:
+        return None
+    try:
+        return int(match.group(1)), parse_price_to_kop(text)
+    except DomainError:
+        return None
+
 
 def build_items_router(settings: Settings) -> Router:
     router = Router(name="items")
     son_id = settings.son_id
     dad_id = settings.dad_id
+
+    @router.message(F.text, F.reply_to_message)
+    async def price_by_reply(message: Message, item_repo: IItemRepository) -> None:
+        """Set price by replying to a card. Stateless: survives bot restarts."""
+        assert message.text is not None
+        replied = message.reply_to_message
+        parsed = parse_reply_price(message.text, replied.text if replied is not None else None)
+        if parsed is None:
+            raise SkipHandler
+        item_id, price_kop = parsed
+        try:
+            response = await SetPriceUseCase(item_repo).execute(
+                SetPriceRequest(item_id=item_id, price_kop=price_kop)
+            )
+        except DomainError as exc:
+            await message.answer(f"Не получилось: {exc}")
+            return
+        item = response.item
+        await message.answer(
+            format_item_card(item),
+            reply_markup=item_keyboard(item, for_son=True),
+            disable_web_page_preview=True,
+        )
 
     @router.message(F.text)
     async def ingest_link(
@@ -43,6 +84,16 @@ def build_items_router(settings: Settings) -> Router:
             if "http" in message.text:
                 await message.answer(
                     "Я отслеживаю только ссылки Ozon (ozon.ru / ozo.ru) 🔗",
+                    reply_markup=main_menu_keyboard(),
+                )
+            else:
+                try:
+                    parse_price_to_kop(message.text)
+                except DomainError:
+                    return
+                await message.answer(
+                    "Похоже на цену 🙂 Нажми ✏️ Цена на карточке товара "
+                    "или просто ответь на карточку ценой — так надежнее.",
                     reply_markup=main_menu_keyboard(),
                 )
             return
@@ -167,11 +218,17 @@ def build_items_router(settings: Settings) -> Router:
         data = await state.get_data()
         item_id = int(data["item_id"])
         try:
-            response = await SetPriceUseCase(item_repo).execute(
-                SetPriceRequest(item_id=item_id, price_text=message.text)
-            )
+            price_kop = parse_price_to_kop(message.text)
         except DomainError as exc:
             await message.answer(f"Не похоже на цену: {exc}\nПопробуй еще раз или /cancel.")
+            return
+        try:
+            response = await SetPriceUseCase(item_repo).execute(
+                SetPriceRequest(item_id=item_id, price_kop=price_kop)
+            )
+        except DomainError as exc:
+            await state.clear()
+            await message.answer(f"Не получилось: {exc}")
             return
         await state.clear()
         item = response.item

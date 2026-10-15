@@ -1,4 +1,4 @@
-"""SetPrice use case: son sets item price from free-form input."""
+"""SetPrice use case: son sets item price in kopecks (parsing lives in adapters)."""
 
 from __future__ import annotations
 
@@ -7,13 +7,12 @@ from dataclasses import dataclass
 from src.domain.entities import Item
 from src.domain.errors import DomainError
 from src.domain.interfaces import IItemRepository
-from src.domain.value_objects import parse_price_to_kop
 
 
 @dataclass(frozen=True)
 class SetPriceRequest:
     item_id: int
-    price_text: str
+    price_kop: int
 
 
 @dataclass(frozen=True)
@@ -31,5 +30,5 @@ class SetPriceUseCase:
             raise DomainError(f"item {request.item_id} not found")
         if item.is_closed:
             raise DomainError(f"item {request.item_id} is closed")
-        item.set_price(parse_price_to_kop(request.price_text))
+        item.set_price(request.price_kop)
         return SetPriceResponse(item=await self._repo.update(item))

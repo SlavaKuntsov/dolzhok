@@ -7,30 +7,32 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from src.adapters.telegram.cards import format_item_line
+from src.adapters.telegram.cards import format_item_card
 from src.adapters.telegram.keyboards import (
     BTN_CANCEL,
     BTN_DEBT,
     BTN_LIST,
     BTN_STATS,
+    item_keyboard,
     main_menu_keyboard,
 )
 from src.domain.interfaces import IItemRepository
 from src.infrastructure.config import Settings
 
 
-async def _send_list(message: Message, item_repo: IItemRepository) -> None:
+async def _send_list(message: Message, item_repo: IItemRepository, *, for_son: bool) -> None:
     items = await item_repo.list_recent(limit=10)
     if not items:
         await message.answer(
             "Пока пусто. Пришли ссылку на Ozon, чтобы начать.", reply_markup=main_menu_keyboard()
         )
         return
-    await message.answer(
-        "\n".join(format_item_line(item) for item in items),
-        reply_markup=main_menu_keyboard(),
-        disable_web_page_preview=True,
-    )
+    for item in items:
+        await message.answer(
+            format_item_card(item),
+            reply_markup=item_keyboard(item, for_son=for_son),
+            disable_web_page_preview=True,
+        )
 
 
 async def _send_debt_stub(message: Message) -> None:
@@ -55,6 +57,10 @@ async def _cancel_state(message: Message, state: FSMContext) -> None:
 
 def build_start_router(settings: Settings) -> Router:
     router = Router(name="start")
+    son_id = settings.son_id
+
+    def _is_son(message: Message) -> bool:
+        return message.from_user is not None and message.from_user.id == son_id
 
     @router.message(CommandStart())
     async def cmd_start(message: Message) -> None:
@@ -86,11 +92,11 @@ def build_start_router(settings: Settings) -> Router:
 
     @router.message(Command("list"))
     async def cmd_list(message: Message, item_repo: IItemRepository) -> None:
-        await _send_list(message, item_repo)
+        await _send_list(message, item_repo, for_son=_is_son(message))
 
     @router.message(F.text == BTN_LIST)
     async def btn_list(message: Message, item_repo: IItemRepository) -> None:
-        await _send_list(message, item_repo)
+        await _send_list(message, item_repo, for_son=_is_son(message))
 
     @router.message(F.text.startswith("/debt"))
     async def cmd_debt_stub(message: Message) -> None:

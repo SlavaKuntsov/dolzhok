@@ -14,14 +14,19 @@ and shows a card to both chats (inline buttons only for son).
    (duplicates are separate goods, e.g. two identical втулки for different needs).
 4. Else create `Item(NEW, price=None)` → card to sender + copy to the other
    party (`🆕 Dad sent #id` / `🆕 Son added #id`).
-5. All user-facing text is Russian. Global actions live in the persistent
+5. `/list` sends recent items as full cards (inline buttons for son), so any
+   in-work item can be managed without scrolling.
+6. Price can be set two ways: `✏️ Цена` button + FSM input, or by replying to
+   a card with a price (stateless, survives bot restarts). A bare number with
+   no context gets a hint instead of silence.
+7. All user-facing text is Russian. Global actions live in the persistent
    reply menu: `📋 Список` (/list), `💰 Долг` (/debt stub until P2),
    `📊 Статистика` (/stats stub until P2), `❌ Отмена` (/cancel, clears FSM).
    `/menu` re-sends the menu if hidden.
 
 ## Acceptance criteria
 - Given message from non-whitelisted user When received Then ignored + `log.warning`, no reply.
-- Given `ozo.ru/abc` short link When ingested Then resolved to canonical `ozon.ru` URL.
+- Given `ozo.ru/abc` or `ozon.by/t/xxx` short link When ingested Then stored as-is (normalized host only).
 - Given same URL twice When ingested Then two items with different `id`.
 - Given son opens a card Then status buttons show every other pipeline
   status in their own rows (free transitions); same-status press is rejected.
