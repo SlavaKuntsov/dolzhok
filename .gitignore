@@ -8,6 +8,7 @@ __pycache__/
 *.sqlite-wal
 *.sqlite-shm
 data/
+backup-*.sql
 .DS_Store
 
 # CodeGraph local index (tooling artifact)

@@ -1,8 +1,11 @@
+# Fly.io app config for a single long-polling worker (no HTTP service).
+# Deploy: docs/PLAN.md P4 / docs/specs/SPEC-004-deploy.md / README "Deploy".
 app = "tg-bot-dad-ozon"
 primary_region = "ams"
 
 [build]
 
+# SQLite must live on the persistent volume, not the ephemeral rootfs.
 [mounts]
   source = "data"
   destination = "/data"
