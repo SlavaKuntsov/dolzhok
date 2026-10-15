@@ -94,10 +94,11 @@ src/
 - [x] `CANCELLED` после `PREPAID` = «вернулось», в долг не входит (видно в `/stats`).
 - [x] Долг/статистика — вычисляемые из `IItemRepository.list_all`, не хранятся.
 
-### P3 — UX-полировка (SPEC-003)
-- Фильтры списка по статусам, пагинация (по 10).
-- Текст карточки: ссылка, цена, статус, оплата, дата.
-- Daily digest сыну (APScheduler, внутри воркера).
+### P3 — UX-полировка (SPEC-003) ✅ done
+- [x] Фильтры `/list` по статусам + пагинация по 10 (одно сообщение, `◀️/▶️`).
+- [x] Карточка: пайплайн статуса, цена/оплата, ссылка, дата (`DD.MM.YYYY`).
+- [x] Кнопка товара в списке открывает полную карточку (`view:<id>`).
+- [-] Daily digest — отменен по решению (APScheduler не добавляем).
 
 ### P4 — Deploy 24/7 (SPEC-004)
 - `fly launch --no-deploy`, volume `data` 1GB `ams`, `fly secrets set`.
@@ -122,5 +123,6 @@ src/
 
 ## 9. Next action
 
-P1 и P2 закрыты. Дальше P3 (`docs/specs/SPEC-003-*.md`): фильтры `/list` по
-статусам + пагинация, подробная карточка (дата), daily digest сыну.
+P1, P2 и P3 закрыты. Дальше P4 (`docs/specs/SPEC-004-*.md`): деплой 24/7 на
+Fly.io (volume `/data` 1GB `ams`, `fly secrets set`, README-раздел Deploy +
+runbook: логи, бэкап `sqlite3 .dump`).
