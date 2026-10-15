@@ -17,8 +17,9 @@ and shows a card to both chats (inline buttons only for son).
 - Given message from non-whitelisted user When received Then ignored + `log.warning`, no reply.
 - Given `ozo.ru/abc` short link When ingested Then resolved to canonical `ozon.ru` URL.
 - Given same URL twice When ingested Then second returns existing `id` (no duplicate).
-- Given son presses `✏️ Price` When FSM input `«1 299,50»` Then `price_kop=129950`.
-- Given son presses status button When `from_user.id != SON_ID` Then `alert` + no state change.
+- Given son presses `✏️ Цена` When FSM input `«1 299,50»` Then `price_kop=129950`.
+- Given non-son whitelisted user triggers a son-only button When received Then `alert` + no state change.
+- Given dad sends a new URL Then son receives a copy; Given son sends Then dad receives a copy.
 
 ## Out of scope
 Autoparsing price/title from Ozon HTML. Payment/debt (SPEC-002).
