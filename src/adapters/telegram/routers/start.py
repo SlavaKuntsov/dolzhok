@@ -10,10 +10,13 @@ from aiogram.types import CallbackQuery, Message
 
 from src.adapters.telegram.cards import card_message
 from src.adapters.telegram.keyboards import (
+    BTN_BACK,
     BTN_CANCEL,
     BTN_DEBT,
+    BTN_DEBTS,
     BTN_LIST,
     BTN_STATS,
+    debt_menu_keyboard,
     main_menu_keyboard,
 )
 from src.adapters.telegram.lists import list_page_message
@@ -79,11 +82,17 @@ async def _list_callback(
 
 
 async def _send_debt(
-    message: Message, item_repo: IItemRepository, repayment_repo: IRepaymentRepository
+    message: Message,
+    item_repo: IItemRepository,
+    repayment_repo: IRepaymentRepository,
+    *,
+    for_son: bool,
 ) -> None:
     debt = await CalcDebtUseCase(item_repo).execute()
     balance = await CalcBalanceUseCase(item_repo, repayment_repo).execute()
-    await message.answer(format_debt_text(debt, balance), reply_markup=main_menu_keyboard())
+    await message.answer(
+        format_debt_text(debt, balance), reply_markup=debt_menu_keyboard(for_son=for_son)
+    )
 
 
 async def _send_stats(message: Message, item_repo: IItemRepository) -> None:
@@ -127,7 +136,7 @@ def build_start_router(settings: Settings) -> Router:
             "👋 Привет! Я семейный трекер заказов Ozon.\n"
             f"Твоя роль: {role}.\n\n"
             "Пришли ссылку на товар — я его запомню.\n"
-            "Кнопки внизу: список товаров и долг.",
+            "Кнопки внизу: список товаров и раздел «Долги».",
             reply_markup=main_menu_keyboard(),
         )
 
@@ -154,6 +163,20 @@ def build_start_router(settings: Settings) -> Router:
         await state.clear()
         await _render_list(message, item_repo)
 
+    @router.message(F.text == BTN_DEBTS)
+    async def btn_debts(message: Message, state: FSMContext) -> None:
+        await state.clear()
+        assert message.from_user is not None
+        await message.answer(
+            "💰 Долги — выбери действие:",
+            reply_markup=debt_menu_keyboard(for_son=message.from_user.id == son_id),
+        )
+
+    @router.message(F.text == BTN_BACK)
+    async def btn_back(message: Message, state: FSMContext) -> None:
+        await state.clear()
+        await message.answer("Главное меню:", reply_markup=main_menu_keyboard())
+
     @router.message(F.text.startswith("/debt"))
     async def cmd_debt(
         message: Message,
@@ -162,7 +185,13 @@ def build_start_router(settings: Settings) -> Router:
         repayment_repo: IRepaymentRepository,
     ) -> None:
         await state.clear()
-        await _send_debt(message, item_repo, repayment_repo)
+        assert message.from_user is not None
+        await _send_debt(
+            message,
+            item_repo,
+            repayment_repo,
+            for_son=message.from_user.id == son_id,
+        )
 
     @router.message(F.text == BTN_DEBT)
     async def btn_debt(
@@ -172,7 +201,13 @@ def build_start_router(settings: Settings) -> Router:
         repayment_repo: IRepaymentRepository,
     ) -> None:
         await state.clear()
-        await _send_debt(message, item_repo, repayment_repo)
+        assert message.from_user is not None
+        await _send_debt(
+            message,
+            item_repo,
+            repayment_repo,
+            for_son=message.from_user.id == son_id,
+        )
 
     @router.message(F.text.startswith("/stats"))
     async def cmd_stats(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:

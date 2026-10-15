@@ -30,11 +30,14 @@ PAYMENT_BUTTON_LABEL: dict[PaymentType, str] = {
 }
 
 BTN_LIST = "📋 Список"
-BTN_DEBT = "💰 Долг"
+BTN_DEBTS = "💰 Долги"
 BTN_STATS = "📊 Статистика"
 BTN_CANCEL = "❌ Отмена"
+# Inside the "💰 Долги" submenu; BTN_DEBTS above only opens it.
+BTN_DEBT = "💰 Долг"
 BTN_PAY = "💸 Погасить"
 BTN_PAYMENTS = "📜 Погашения"
+BTN_BACK = "⬅️ Назад"
 
 # List filter buttons: "ALL" plus one per status. Active filter is inert.
 LIST_FILTER_LABEL: dict[str, str] = {
@@ -163,13 +166,29 @@ def list_keyboard(
 
 
 def main_menu_keyboard() -> ReplyKeyboardMarkup:
-    """Persistent reply menu with all global actions."""
+    """Persistent reply menu; money actions live under the «💰 Долги» submenu."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=BTN_LIST), KeyboardButton(text=BTN_DEBT)],
-            [KeyboardButton(text=BTN_PAY), KeyboardButton(text=BTN_PAYMENTS)],
+            [KeyboardButton(text=BTN_LIST), KeyboardButton(text=BTN_DEBTS)],
             [KeyboardButton(text=BTN_STATS), KeyboardButton(text=BTN_CANCEL)],
         ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
+def debt_menu_keyboard(*, for_son: bool) -> ReplyKeyboardMarkup:
+    """Submenu for debt/repayments.
+
+    Son gets the «💸 Погасить» entry; dad sees the read-only actions only.
+    """
+    rows = [[KeyboardButton(text=BTN_DEBT), KeyboardButton(text=BTN_PAYMENTS)]]
+    if for_son:
+        rows.append([KeyboardButton(text=BTN_PAY), KeyboardButton(text=BTN_BACK)])
+    else:
+        rows.append([KeyboardButton(text=BTN_BACK)])
+    return ReplyKeyboardMarkup(
+        keyboard=rows,
         resize_keyboard=True,
         is_persistent=True,
     )

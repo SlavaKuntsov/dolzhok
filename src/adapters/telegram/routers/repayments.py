@@ -9,7 +9,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src.adapters.telegram.fsm import RepaymentStates
-from src.adapters.telegram.keyboards import BTN_PAY, BTN_PAYMENTS, main_menu_keyboard
+from src.adapters.telegram.keyboards import (
+    BTN_PAY,
+    BTN_PAYMENTS,
+    debt_menu_keyboard,
+    main_menu_keyboard,
+)
 from src.adapters.telegram.payments import payments_message, repayment_confirm_message
 from src.domain.entities import Repayment
 from src.domain.errors import DomainError
@@ -155,7 +160,7 @@ def build_repayments_router(settings: Settings) -> Router:
         reply = await save(
             state, item_repo, repayment_repo, amount_kop=int(data["amount_kop"]), note=message.text
         )
-        await message.answer(reply, reply_markup=main_menu_keyboard())
+        await message.answer(reply, reply_markup=debt_menu_keyboard(for_son=True))
 
     @router.callback_query(F.data == "paynonote", F.from_user.id == son_id)
     async def skip_note(
@@ -172,7 +177,7 @@ def build_repayments_router(settings: Settings) -> Router:
             state, item_repo, repayment_repo, amount_kop=int(data["amount_kop"]), note=None
         )
         if isinstance(callback.message, Message):
-            await callback.message.answer(reply, reply_markup=main_menu_keyboard())
+            await callback.message.answer(reply, reply_markup=debt_menu_keyboard(for_son=True))
         await callback.answer()
 
     @router.callback_query(F.data == "paynonote")
