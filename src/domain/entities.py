@@ -90,3 +90,23 @@ class Item:
     def is_returned(self) -> bool:
         """Prepaid item that got cancelled — money came back, never counts as debt."""
         return self.status is ItemStatus.CANCELLED and self.payment is PaymentType.PREPAID
+
+
+NOTE_MAX_LEN = 256
+
+
+@dataclass
+class Repayment:
+    """One cash transfer from dad to son that shrinks the running balance."""
+
+    amount_kop: int
+    created_by: int
+    id: int | None = None
+    note: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def __post_init__(self) -> None:
+        if self.amount_kop <= 0:
+            raise DomainError("repayment amount must be positive")
+        if self.note is not None and len(self.note) > NOTE_MAX_LEN:
+            raise DomainError("repayment note is too long")

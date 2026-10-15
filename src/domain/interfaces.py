@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities import Item
+from src.domain.entities import Item, Repayment
 
 
 class IItemRepository(ABC):
@@ -33,3 +33,19 @@ class IItemRepository(ABC):
     @abstractmethod
     async def update(self, item: Item) -> Item:
         """Persist changes of an existing item."""
+
+
+class IRepaymentRepository(ABC):
+    """Async persistence port for the Repayment ledger."""
+
+    @abstractmethod
+    async def add(self, repayment: Repayment) -> Repayment:
+        """Persist a new repayment, return it with assigned id."""
+
+    @abstractmethod
+    async def list_all(self) -> list[Repayment]:
+        """Return every repayment, newest first."""
+
+    @abstractmethod
+    async def delete(self, repayment_id: int) -> bool:
+        """Delete by id; return False when nothing matched."""
