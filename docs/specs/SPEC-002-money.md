@@ -9,7 +9,7 @@ running total — `debt` and stats are derived from items on every call.
 1. Son sets payment on an item in work (`ORDERED` or `RECEIVED`) via inline
    buttons `💳 Предоплата` / `💳 Постоплата` (the current choice is inert).
    Payment may be (re)set on received items too.
-2. `/debt` (or `💰 Долг`) shows two numbers:
+2. `/debt` (or `💰 Долг` inside the `💰 Долги` submenu) shows two numbers:
    - `Папа должен` — prepaid items in `ORDERED`/`RECEIVED` (son paid, dad owes).
    - `Ждет постоплаты` — postpaid items still `ORDERED` (dad pays on receipt).
    It also shows the running balance after repayments — `Погашено`, `Остаток`
