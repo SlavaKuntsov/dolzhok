@@ -27,7 +27,7 @@ def _pipeline_line(item: Item) -> str:
     for number, status in enumerate(PIPELINE, start=1):
         name = STATUS_LABEL[status]
         if status == item.status:
-            name = f"<b>{name}</b>"
+            name = f"<b><u>{name}</u></b>"
         parts.append(f"{number} {name}")
     return " → ".join(parts)
 
