@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -70,12 +71,19 @@ def build_items_router(settings: Settings) -> Router:
         # Notify the other party so both chats stay in sync.
         other_id = dad_id if is_son else son_id
         who = "Сын добавил" if is_son else "Папа прислал"
-        await bot.send_message(
-            other_id,
-            f"🆕 {who} #{item.id}\n\n{format_item_card(item)}",
-            reply_markup=item_keyboard(item, for_son=not is_son),
-            disable_web_page_preview=True,
-        )
+        try:
+            await bot.send_message(
+                other_id,
+                f"🆕 {who} #{item.id}\n\n{format_item_card(item)}",
+                reply_markup=item_keyboard(item, for_son=not is_son),
+                disable_web_page_preview=True,
+            )
+        except TelegramBadRequest:
+            # No chat yet: the other party never pressed /start.
+            logger.warning("notify copy to %s failed: chat not found", other_id)
+            await message.answer(
+                "⚠️ Вторая сторона еще не запустила бота (/start) — копия не доставлена."
+            )
 
     @router.callback_query(F.data.startswith("price:"), F.from_user.id == son_id)
     async def ask_price(
