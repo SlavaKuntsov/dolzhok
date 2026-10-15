@@ -6,7 +6,7 @@ primary_region = "ams"
 [build]
 
 # SQLite must live on the persistent volume, not the ephemeral rootfs.
-[mounts]
+[[mounts]]
   source = "data"
   destination = "/data"
 
@@ -14,6 +14,8 @@ primary_region = "ams"
   DATABASE_URL = "sqlite+aiosqlite:////data/bot.db"
   LOG_LEVEL = "INFO"
 
+# 512MB: python + aiogram + pydantic + sqlalchemy imports already need ~196MB,
+# so a 256MB machine OOMs. Keep this in sync with `flyctl machine update`.
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = "512mb"
