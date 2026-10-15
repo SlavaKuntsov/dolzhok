@@ -22,9 +22,16 @@ def test_item_keyboard_new_has_transitions_and_price() -> None:
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
     assert "st:1:TO_ORDER" in payloads
+    assert "st:1:ORDERED" in payloads
+    assert "st:1:RECEIVED" in payloads
     assert "st:1:CANCELLED" in payloads
+    assert "st:1:NEW" not in payloads
     assert "price:1" in payloads
     assert "qty:1" in payloads
+    # Statuses live in their own rows, actions share the last row.
+    assert len(keyboard.inline_keyboard) == 3
+    last_row = [b.callback_data for b in keyboard.inline_keyboard[-1]]
+    assert last_row == ["price:1", "qty:1"]
 
 
 def test_item_keyboard_hidden_for_dad_and_closed() -> None:

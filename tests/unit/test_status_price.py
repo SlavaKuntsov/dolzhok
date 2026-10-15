@@ -47,10 +47,19 @@ async def test_change_status_valid_chain() -> None:
         assert response.item.status == target
 
 
-async def test_change_status_illegal_raises() -> None:
+async def test_change_status_free_jump() -> None:
+    repo, item = await _seed()
+    assert item.id is not None
+    response = await ChangeStatusUseCase(repo).execute(
+        ChangeStatusRequest(item_id=item.id, target=ItemStatus.RECEIVED)
+    )
+    assert response.item.status == ItemStatus.RECEIVED
+
+
+async def test_change_status_same_status_raises() -> None:
     repo, item = await _seed()
     assert item.id is not None
     with pytest.raises(DomainError):
         await ChangeStatusUseCase(repo).execute(
-            ChangeStatusRequest(item_id=item.id, target=ItemStatus.RECEIVED)
+            ChangeStatusRequest(item_id=item.id, target=ItemStatus.NEW)
         )

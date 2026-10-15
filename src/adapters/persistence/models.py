@@ -16,7 +16,7 @@ class ItemModel(Base):
     __tablename__ = "items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    url: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
     sku: Mapped[str | None] = mapped_column(String(64), nullable=True)
     title: Mapped[str | None] = mapped_column(String(512), nullable=True)
     price_kop: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

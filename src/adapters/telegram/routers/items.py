@@ -62,9 +62,8 @@ def build_items_router(settings: Settings) -> Router:
             return
         item = response.item
         is_son = sender_id == son_id
-        header = "✅ Сохранено" if response.created else "ℹ️ Уже отслеживаю"
         await message.answer(
-            f"{header} #{item.id}\n\n{format_item_card(item)}",
+            f"✅ Сохранено #{item.id}\n\n{format_item_card(item)}",
             reply_markup=item_keyboard(item, for_son=is_son),
             disable_web_page_preview=True,
         )

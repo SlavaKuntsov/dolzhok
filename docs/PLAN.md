@@ -34,7 +34,8 @@
 ## 3. Ubiquitous Language
 
 - `Item` — одна ссылка/товар. Агрегат.
-- `status` — `NEW | TO_ORDER | ORDERED | RECEIVED | CANCELLED`.
+- `status` — `NEW | TO_ORDER | ORDERED | RECEIVED | CANCELLED`, переходы свободные
+  (любой → любой, кроме того же). Повторные ссылки — отдельные товары, дедупа нет.
 - `payment` — `PREPAID | POSTPAID` (устанавливает сын при заказе).
 - `price_kop` — цена в копейках, `int | None` до ручного ввода.
 - `debt` — **вычисляемое**, не хранится:

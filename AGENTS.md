@@ -37,7 +37,7 @@ infrastructure/ # config, engine/session, logging
 - Граница через порт `IItemRepository` (async). Сейчас `SqliteItemRepository`, позже Turso — use-case'ы не меняются.
 - Маппинг ORM ↔ entity только в `adapters/persistence/*_repo.py` (`_to_entity/_to_model`).
 - Деньги: `int` копейки + `Money` VO, валидация в `__post_init__`, отрицательные запрещены.
-- Статусы: `NEW → TO_ORDER → ORDERED → RECEIVED | CANCELLED`. Невалидный переход = `DomainError`, не молчаливое `pass`.
+- Статусы: любой → любой (кроме того же), свободной выбор кнопками. Повторные ссылки = отдельные товары (дедупа нет).
 - FSM: минимум шагов; цена — парсинг `«1 299,50» → 129950`.
 
 ## 4. AI-first workflow (порядок на каждую фичу)

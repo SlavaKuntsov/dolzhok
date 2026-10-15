@@ -22,18 +22,9 @@ class PaymentType(StrEnum):
     POSTPAID = "POSTPAID"
 
 
-_ALLOWED_TRANSITIONS: dict[ItemStatus, frozenset[ItemStatus]] = {
-    ItemStatus.NEW: frozenset({ItemStatus.TO_ORDER, ItemStatus.CANCELLED}),
-    ItemStatus.TO_ORDER: frozenset({ItemStatus.ORDERED, ItemStatus.CANCELLED}),
-    ItemStatus.ORDERED: frozenset({ItemStatus.RECEIVED, ItemStatus.CANCELLED}),
-    ItemStatus.RECEIVED: frozenset(),
-    ItemStatus.CANCELLED: frozenset(),
-}
-
-
 def allowed_next(status: ItemStatus) -> frozenset[ItemStatus]:
-    """Return statuses reachable from the given one."""
-    return _ALLOWED_TRANSITIONS[status]
+    """Any other pipeline status is reachable (transitions are free)."""
+    return frozenset(s for s in ItemStatus if s != status)
 
 
 @dataclass
@@ -70,8 +61,8 @@ class Item:
         self.qty = qty
 
     def transition(self, target: ItemStatus) -> None:
-        if target not in _ALLOWED_TRANSITIONS[self.status]:
-            raise DomainError(f"illegal transition {self.status.value} -> {target.value}")
+        if target == self.status:
+            raise DomainError(f"item is already {self.status.value}")
         self.status = target
 
     @property

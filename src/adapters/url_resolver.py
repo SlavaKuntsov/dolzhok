@@ -22,7 +22,7 @@ _HEADERS = {
 class HttpxOzonResolver(IUrlResolver):
     """Follow redirects (HEAD, then GET fallback); return input URL on failure."""
 
-    def __init__(self, timeout: float = 8.0) -> None:
+    def __init__(self, timeout: float = 5.0) -> None:
         self._timeout = timeout
 
     async def resolve(self, url: str) -> str:

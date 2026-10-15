@@ -12,29 +12,27 @@ URL = "https://www.ozon.ru/product/phone-123456789/"
 async def test_add_item_creates_new() -> None:
     use_case = AddItemUseCase(InMemoryItemRepository(), FakeUrlResolver())
     response = await use_case.execute(AddItemRequest(raw_url=URL, from_user_id=1))
-    assert response.created is True
     assert response.item.id == 1
     assert response.item.url == "https://ozon.ru/product/phone-123456789"
     assert response.item.sku == "123456789"
     assert response.item.status == ItemStatus.NEW
 
 
-async def test_add_item_dedup_returns_existing() -> None:
+async def test_add_item_allows_duplicates_as_separate_items() -> None:
     repo = InMemoryItemRepository()
     use_case = AddItemUseCase(repo, FakeUrlResolver())
     first = await use_case.execute(AddItemRequest(raw_url=URL, from_user_id=1))
     second = await use_case.execute(
         AddItemRequest(raw_url="https://ozon.ru/product/phone-123456789", from_user_id=1)
     )
-    assert second.created is False
-    assert second.item.id == first.item.id
+    assert first.item.id != second.item.id
+    assert second.item.url == first.item.url
 
 
 async def test_add_item_resolves_short_link() -> None:
     resolver = FakeUrlResolver({"https://ozo.ru/abc": "https://www.ozon.ru/product/x-999/"})
     use_case = AddItemUseCase(InMemoryItemRepository(), resolver)
     response = await use_case.execute(AddItemRequest(raw_url="https://ozo.ru/abc", from_user_id=1))
-    assert response.created is True
     assert response.item.url == "https://ozon.ru/product/x-999"
 
 
@@ -46,7 +44,6 @@ async def test_add_item_resolves_t_share_link() -> None:
     response = await use_case.execute(
         AddItemRequest(raw_url="https://ozon.by/t/9oLOYk1", from_user_id=1, title="Втулка Д16мм")
     )
-    assert response.created is True
     assert response.item.url == "https://ozon.by/product/vtulka-123456789"
     assert response.item.title == "Втулка Д16мм"
 
