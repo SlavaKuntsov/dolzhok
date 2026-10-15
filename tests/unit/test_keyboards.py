@@ -5,6 +5,7 @@ from src.adapters.telegram.keyboards import (
     BTN_DEBT,
     BTN_LIST,
     BTN_STATS,
+    STATUS_BUTTON_LABEL,
     item_keyboard,
     main_menu_keyboard,
 )
@@ -32,6 +33,10 @@ def test_item_keyboard_new_has_transitions_and_price() -> None:
     assert len(keyboard.inline_keyboard) == 3
     last_row = [b.callback_data for b in keyboard.inline_keyboard[-1]]
     assert last_row == ["price:1", "qty:1"]
+
+
+def test_order_button_says_order() -> None:
+    assert STATUS_BUTTON_LABEL[ItemStatus.TO_ORDER] == "📝 Заказать"
 
 
 def test_item_keyboard_hidden_for_dad_and_closed() -> None:

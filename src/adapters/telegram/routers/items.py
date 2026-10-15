@@ -8,6 +8,7 @@ import re
 from aiogram import Bot, F, Router
 from aiogram.dispatcher.event.bases import SkipHandler
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -48,6 +49,8 @@ def build_items_router(settings: Settings) -> Router:
     son_id = settings.son_id
     dad_id = settings.dad_id
 
+    # NOTE: registered before ingest_link, but ingest_link also excludes
+    # waiting states via StateFilter — belt and suspenders against shadowing.
     @router.message(F.text, F.reply_to_message)
     async def price_by_reply(message: Message, item_repo: IItemRepository) -> None:
         """Set price by replying to a card. Stateless: survives bot restarts."""
@@ -71,7 +74,7 @@ def build_items_router(settings: Settings) -> Router:
             disable_web_page_preview=True,
         )
 
-    @router.message(F.text)
+    @router.message(F.text, ~StateFilter(PriceStates.waiting_price, QtyStates.waiting_qty))
     async def ingest_link(
         message: Message,
         bot: Bot,

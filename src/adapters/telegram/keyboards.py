@@ -13,7 +13,7 @@ from src.domain.entities import Item, ItemStatus
 
 STATUS_BUTTON_LABEL: dict[ItemStatus, str] = {
     ItemStatus.NEW: "🆕 Новое",
-    ItemStatus.TO_ORDER: "📝 К заказу",
+    ItemStatus.TO_ORDER: "📝 Заказать",
     ItemStatus.ORDERED: "📦 Заказан",
     ItemStatus.RECEIVED: "✅ Получен",
     ItemStatus.CANCELLED: "🚫 Отмена",

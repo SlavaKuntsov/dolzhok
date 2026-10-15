@@ -63,7 +63,8 @@ def build_start_router(settings: Settings) -> Router:
         return message.from_user is not None and message.from_user.id == son_id
 
     @router.message(CommandStart())
-    async def cmd_start(message: Message) -> None:
+    async def cmd_start(message: Message, state: FSMContext) -> None:
+        await state.clear()
         user_id = message.from_user.id if message.from_user else None
         role = (
             "сын (управляешь заказами)"
@@ -87,31 +88,38 @@ def build_start_router(settings: Settings) -> Router:
         await _cancel_state(message, state)
 
     @router.message(Command("menu"))
-    async def cmd_menu(message: Message) -> None:
+    async def cmd_menu(message: Message, state: FSMContext) -> None:
+        await state.clear()
         await message.answer("Меню действий:", reply_markup=main_menu_keyboard())
 
     @router.message(Command("list"))
-    async def cmd_list(message: Message, item_repo: IItemRepository) -> None:
+    async def cmd_list(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:
+        await state.clear()
         await _send_list(message, item_repo, for_son=_is_son(message))
 
     @router.message(F.text == BTN_LIST)
-    async def btn_list(message: Message, item_repo: IItemRepository) -> None:
+    async def btn_list(message: Message, state: FSMContext, item_repo: IItemRepository) -> None:
+        await state.clear()
         await _send_list(message, item_repo, for_son=_is_son(message))
 
     @router.message(F.text.startswith("/debt"))
-    async def cmd_debt_stub(message: Message) -> None:
+    async def cmd_debt_stub(message: Message, state: FSMContext) -> None:
+        await state.clear()
         await _send_debt_stub(message)
 
     @router.message(F.text == BTN_DEBT)
-    async def btn_debt_stub(message: Message) -> None:
+    async def btn_debt_stub(message: Message, state: FSMContext) -> None:
+        await state.clear()
         await _send_debt_stub(message)
 
     @router.message(F.text.startswith("/stats"))
-    async def cmd_stats_stub(message: Message) -> None:
+    async def cmd_stats_stub(message: Message, state: FSMContext) -> None:
+        await state.clear()
         await _send_stats_stub(message)
 
     @router.message(F.text == BTN_STATS)
-    async def btn_stats_stub(message: Message) -> None:
+    async def btn_stats_stub(message: Message, state: FSMContext) -> None:
+        await state.clear()
         await _send_stats_stub(message)
 
     return router
