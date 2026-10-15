@@ -38,6 +38,19 @@ async def test_add_item_resolves_short_link() -> None:
     assert response.item.url == "https://ozon.ru/product/x-999"
 
 
+async def test_add_item_resolves_t_share_link() -> None:
+    resolver = FakeUrlResolver(
+        {"https://ozon.by/t/9oLOYk1": "https://ozon.by/product/vtulka-123456789/"}
+    )
+    use_case = AddItemUseCase(InMemoryItemRepository(), resolver)
+    response = await use_case.execute(
+        AddItemRequest(raw_url="https://ozon.by/t/9oLOYk1", from_user_id=1, title="Втулка Д16мм")
+    )
+    assert response.created is True
+    assert response.item.url == "https://ozon.by/product/vtulka-123456789"
+    assert response.item.title == "Втулка Д16мм"
+
+
 async def test_add_item_rejects_non_ozon() -> None:
     from src.domain.errors import DomainError
 

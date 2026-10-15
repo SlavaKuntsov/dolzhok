@@ -46,9 +46,14 @@ def build_items_router(settings: Settings) -> Router:
                 )
             return
         sender_id = message.from_user.id
+        raw_url = urls[0]
         try:
             response = await AddItemUseCase(item_repo, url_resolver).execute(
-                AddItemRequest(raw_url=urls[0], from_user_id=sender_id)
+                AddItemRequest(
+                    raw_url=raw_url,
+                    from_user_id=sender_id,
+                    title=ozon.extract_title(message.text, raw_url),
+                )
             )
         except DomainError as exc:
             await message.answer(f"Не получилось сохранить ссылку: {exc}")

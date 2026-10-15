@@ -5,8 +5,10 @@ Anyone whitelisted (dad or son) sends an Ozon URL, bot stores an `Item(NEW)`
 and shows a card to both chats (inline buttons only for son).
 
 ## Flows
-1. Whitelisted user sends message containing `ozon.ru/...` or `ozo.ru/...`.
-2. Bot normalizes URL (resolve `ozo.ru` via HEAD redirect), extracts SKU/slug.
+1. Whitelisted user sends message containing an Ozon URL (any locale:
+   `ozon.ru/by/kz/com/uz`, short `ozo.ru`, share `/t/` links). Leading text
+   before the URL is stored as the item title.
+2. Bot normalizes URL (resolve short/share links via HEAD redirect), extracts SKU/slug.
 3. If URL already exists (dedup) → reply with existing card `#id`, no new row.
 4. Else create `Item(NEW, price=None)` → card to sender + copy to the other
    party (`🆕 Dad sent #id` / `🆕 Son added #id`).

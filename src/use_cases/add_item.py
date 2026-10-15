@@ -13,6 +13,7 @@ from src.domain.interfaces import IItemRepository, IUrlResolver
 class AddItemRequest:
     raw_url: str
     from_user_id: int
+    title: str | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,8 @@ class AddItemUseCase:
         existing = await self._repo.find_by_url(url)
         if existing is not None:
             return AddItemResponse(item=existing, created=False)
-        item = Item(url=url, sku=ozon.extract_sku(url), created_by=request.from_user_id)
+        item = Item(
+            url=url, sku=ozon.extract_sku(url), title=request.title, created_by=request.from_user_id
+        )
         saved = await self._repo.add(item)
         return AddItemResponse(item=saved, created=True)

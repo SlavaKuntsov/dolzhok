@@ -27,7 +27,10 @@ def format_item_card(item: Item) -> str:
     emoji = STATUS_EMOJI[item.status]
     label = STATUS_LABEL[item.status]
     price = Money(item.price_kop).format_rub() if item.price_kop is not None else "цены пока нет"
-    lines = [f"#{item.id} {emoji} {label}", "", f"🔗 {item.url}", f"💰 {price}"]
+    lines = [f"#{item.id} {emoji} {label}"]
+    if item.title:
+        lines += ["", item.title]
+    lines += ["", f"🔗 {item.url}", f"💰 {price}"]
     if item.sku:
         lines.append(f"🏷 Артикул {item.sku}")
     return "\n".join(lines)
