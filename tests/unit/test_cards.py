@@ -1,13 +1,19 @@
 """Tests for compact HTML card rendering (Russian user-facing text)."""
 
-from src.adapters.telegram.cards import format_item_card
+from datetime import UTC, datetime
+
+from src.adapters.telegram.cards import format_item_card, item_summary
 from src.domain.entities import Item, ItemStatus, PaymentType
+
+FIXED = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
 
 
 def test_format_item_card_new_no_price() -> None:
-    item = Item(id=1, url="https://ozon.by/t/abc", created_by=1)
+    item = Item(id=1, url="https://ozon.by/t/abc", created_by=1, created_at=FIXED)
     assert format_item_card(item) == (
-        "#1 · 1 <b><u>новое</u></b> → 2 заказано → 3 получено\n💰 цены пока нет · 🔗 https://ozon.by/t/abc"
+        "#1 · 1 <b><u>новое</u></b> → 2 заказано → 3 получено\n"
+        "💰 цены пока нет\n"
+        "🔗 https://ozon.by/t/abc · 📅 15.10.2026"
     )
 
 
@@ -20,11 +26,13 @@ def test_format_item_card_with_title_price_qty() -> None:
         price_kop=129950,
         qty=2,
         status=ItemStatus.ORDERED,
+        created_at=FIXED,
     )
     assert format_item_card(item) == (
         "#2 · 1 новое → 2 <b><u>заказано</u></b> → 3 получено\n"
         "Втулка Д16мм\n"
-        "💰 1 299,50 BYN × 2 = 2 599,00 BYN · 🔗 https://ozon.by/t/xyz"
+        "💰 1 299,50 BYN × 2 = 2 599,00 BYN\n"
+        "🔗 https://ozon.by/t/xyz · 📅 15.10.2026"
     )
 
 
@@ -76,3 +84,16 @@ def test_format_item_card_returned() -> None:
     card = format_item_card(item)
     assert card.startswith("#9 · 🚫 отменено\n")
     assert "💰 1 299,50 BYN · ↩️ возврат" in card
+
+
+def test_format_item_card_has_link_and_date() -> None:
+    item = Item(id=10, url="https://ozon.ru/product/x-10", created_by=1, created_at=FIXED)
+    card = format_item_card(item)
+    assert "🔗 https://ozon.ru/product/x-10 · 📅 15.10.2026" in card
+
+
+def test_item_summary_with_and_without_price() -> None:
+    priced = Item(id=3, url="https://ozon.ru/product/x-3", created_by=1, price_kop=129950, qty=2)
+    assert item_summary(priced) == "#3 · 🆕 · 2 599,00 BYN"
+    unpriced = Item(id=4, url="https://ozon.ru/product/x-4", created_by=1)
+    assert item_summary(unpriced) == "#4 · 🆕 · нет цены"

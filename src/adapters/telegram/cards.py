@@ -23,6 +23,14 @@ PAYMENT_LABEL: dict[PaymentType, str] = {
     PaymentType.POSTPAID: "💳 постоплата",
 }
 
+# Short status marker for compact list buttons.
+STATUS_SHORT: dict[ItemStatus, str] = {
+    ItemStatus.NEW: "🆕",
+    ItemStatus.ORDERED: "📦",
+    ItemStatus.RECEIVED: "✅",
+    ItemStatus.CANCELLED: "🚫",
+}
+
 
 def _pipeline_line(item: Item) -> str:
     """One-line pipeline with the current step bold+underline."""
@@ -57,13 +65,27 @@ def _money_line(item: Item) -> str:
     return f"💰 {price}{suffix}"
 
 
+def _date_line(item: Item) -> str:
+    return f"🔗 {html.escape(item.url)} · 📅 {item.created_at.strftime('%d.%m.%Y')}"
+
+
 def format_item_card(item: Item) -> str:
-    """Compact card: header with pipeline, optional title, money + link (HTML)."""
+    """Compact card: pipeline status, title, money, link + date (HTML)."""
     lines = [f"#{item.id} · {_pipeline_line(item)}"]
     if item.title:
         lines.append(html.escape(item.title))
-    lines.append(f"{_money_line(item)} · 🔗 {html.escape(item.url)}")
+    lines.append(_money_line(item))
+    lines.append(_date_line(item))
     return "\n".join(lines)
+
+
+def item_summary(item: Item) -> str:
+    """One-line list entry: `#id · status · money` (no HTML)."""
+    if item.total_kop is None:
+        money = "нет цены"
+    else:
+        money = Money(item.total_kop).format_rub()
+    return f"#{item.id} · {STATUS_SHORT[item.status]} · {money}"
 
 
 def card_message(item: Item, *, for_son: bool, prefix: str = "") -> dict[str, Any]:
