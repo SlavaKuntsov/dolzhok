@@ -1,13 +1,16 @@
 """Tests for keyboards: card actions and main menu."""
 
 from src.adapters.telegram.keyboards import (
+    BTN_BACK,
     BTN_CANCEL,
     BTN_DEBT,
+    BTN_DEBTS,
     BTN_LIST,
     BTN_PAY,
     BTN_PAYMENTS,
     BTN_STATS,
     STATUS_BUTTON_LABEL,
+    debt_menu_keyboard,
     item_keyboard,
     main_menu_keyboard,
 )
@@ -16,7 +19,18 @@ from src.domain.entities import Item, ItemStatus, PaymentType
 
 def test_main_menu_has_all_actions() -> None:
     labels = [b.text for row in main_menu_keyboard().keyboard for b in row]
-    assert labels == [BTN_LIST, BTN_DEBT, BTN_PAY, BTN_PAYMENTS, BTN_STATS, BTN_CANCEL]
+    assert labels == [BTN_LIST, BTN_DEBTS, BTN_STATS, BTN_CANCEL]
+
+
+def test_debt_submenu_son_has_pay() -> None:
+    labels = [b.text for row in debt_menu_keyboard(for_son=True).keyboard for b in row]
+    assert labels == [BTN_DEBT, BTN_PAYMENTS, BTN_PAY, BTN_BACK]
+
+
+def test_debt_submenu_dad_has_no_pay() -> None:
+    labels = [b.text for row in debt_menu_keyboard(for_son=False).keyboard for b in row]
+    assert labels == [BTN_DEBT, BTN_PAYMENTS, BTN_BACK]
+    assert BTN_PAY not in labels
 
 
 def test_item_keyboard_shows_all_statuses_current_inert() -> None:
