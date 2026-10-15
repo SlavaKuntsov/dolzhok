@@ -7,16 +7,21 @@
 
 | Вопрос | Решение |
 |---|---|
-| Хостинг | Бесплатный клауд 24/7 (MacBook — только разработка) |
-| БД на старт | SQLite файл + Repository-порт под замену (Turso) |
+| Хостинг | **Vercel** (serverless, **webhook**), план Hobby — $0, non-commercial |
+| БД | **Neon Postgres** (`asyncpg`) в проде; локально/интеграционные тесты — SQLite (`aiosqlite`) |
 | Цена товара | Ручной ввод (автопарсинг Ozon ненадежен: JS/капча) |
 | Роли | Папа и сын оба шлют ссылки; статусы/цены меняет только сын |
 
-**Следствие про «офлайн-накопление»:** при `long polling` Telegram хранит
-неподтвержденные апдейты **24 часа** (`getUpdates`/`offset`). Простой < 24ч
-закрывается сам: бот просыпается и забирает очередь. Клауд 24/7 убирает
-проблему полностью. Отдельный «офлайн-режим простановки статусов» не нужен —
-состояния живут в БД, а не на клиенте.
+**Отклонено:** Fly.io — у новых организаций нет free-tier, always-on машина ≈
+$3.9/мес, а 256 МБ уходит в OOM (импорт aiogram+pydantic+sqlalchemy ≈ 196 МБ) →
+нужно 512 МБ. Turso — `sqlalchemy-libsql` **без async-движка**, переписывать
+репозиторий. Oracle/GCP/AWS — карты и гео-ограничения (РБ).
+
+**Следствие про доставку апдейтов:** прод-бот работает через **webhook** (long
+polling только как локальный fallback): Telegram шлёт POST на Vercel-URL, каждый
+апдейт = вызов serverless-функции. Состояния живут в БД, «офлайн-режим простановки
+статусов» не нужен. Функция просыпается на запрос, поэтому простой закрывается почти
+мгновенно; недоставленные апдейты Telegram ретраит с backoff.
 
 ## 2. Goal / Non-goals
 
@@ -44,10 +49,14 @@
 ## 4. Stack
 
 - Python **3.14** + `uv` (lock, sync, run).
-- `aiogram 3.x` (`>=3,<4`) — async, routers, FSM.
-- `SQLAlchemy 2.0 async` + `aiosqlite` (WAL) + `Alembic`.
+- `aiogram 3.x` (`>=3,<4`) — async, routers, FSM; доставка через **webhook**
+  (ASGI-приложение на FastAPI) на Vercel.
+- `SQLAlchemy 2.0 async` + `asyncpg` (прод, Neon Postgres) / `aiosqlite` (локально,
+  интеграционные тесты) + `Alembic`. Репозиторий диалект-агностичен.
 - `pydantic-settings` — `BOT_TOKEN`, `DAD_ID`, `SON_ID`, `DATABASE_URL`.
-- Docker + `fly.toml` + volume `/data` (Fly.io free).
+- **Vercel** (Hobby, Python Function) + **Neon Postgres** (Vercel Marketplace, $0).
+- Опционально: `Dockerfile` + `fly.toml` + volume `/data` (SPEC-004) — оставлены как
+  альтернативный деплой, но **не прод**.
 - Тесты: `pytest`, `pytest-asyncio`.
 
 ## 5. Architecture (Clean / Hexagonal)
@@ -57,8 +66,8 @@ src/
   domain/          # pure: entities, value objects, ports. НЕТ aiogram/SQLAlchemy
   use_cases/       # только domain + порты (IItemRepository)
   adapters/
-    telegram/      # routers, keyboards, filters, FSM
-    persistence/   # ORM models, SqliteItemRepository, маппинг <-> entity
+    persistence/   # ORM models, репозиторий на SQLAlchemy (SQLite локально / Postgres в проде)
+    telegram/      # routers, keyboards, filters, FSM + webhook entrypoint (ASGI)
   infrastructure/  # config, db engine/session, logging
 ```
 
@@ -100,21 +109,29 @@ src/
 - [x] Кнопка товара в списке открывает полную карточку (`view:<id>`).
 - [-] Daily digest — отменен по решению (APScheduler не добавляем).
 
-### P4 — Deploy 24/7 (SPEC-004) ✅ code done
-- [x] `docker-entrypoint.sh`: `alembic upgrade head` против `DATABASE_URL` перед
-  стартом бота; `alembic/env.py` предпочитает env-переменную `alembic.ini`.
-- [x] `Dockerfile`: `uv sync --frozen --no-install-project`, `sqlite3` CLI,
-  `.dockerignore` (без `.env`/`data/`/`.git`).
-- [x] `fly.toml` (volume `data` → `/data`, регион `ams`, `DATABASE_URL`); Makefile
-  `fly-init` / `restore` / `restart`.
-- [x] README-раздел Deploy + runbook (логи, бэкап/restore, догон < 24ч, stamp).
-- [ ] Живой деплой: `make fly-init`, `fly secrets set`, `make deploy` и проверка
-  рестарта (нужен Fly-аккаунт; `flyctl` не в CI).
+### P4 — Deploy 24/7 (SPEC-004) ❌ отклонён (хостинг)
+Код готов и проверен вживую, но Fly.io оказался платным (~$3.9/мес: нет free-tier
+у новых орг, 256 МБ OOM → 512 МБ). Оставлен как **опциональный** деплой.
+- [x] `docker-entrypoint.sh`, `Dockerfile`, `.dockerignore`, `fly.toml`, Makefile.
+- [x] Живой деплой проверен (миграции на volume, polling, рестарт) — затем остановлен.
+- [-] Прод-хостинг переносится на Vercel (см. P5).
+
+### P5 — Vercel webhook + Neon (SPEC-005)
+- [ ] Webhook-адаптер: ASGI-приложение (FastAPI) с aiogram-webhook; `setWebhook`
+  при деплое, `deleteWebhook` при teardown. Long polling остаётся локальным fallback.
+- [ ] Persistence: `DATABASE_URL=postgresql+asyncpg://…` (Neon), добавить `asyncpg`;
+  SQLite (`aiosqlite`) — для local/тестов; `init_db` без SQLite-only `PRAGMA WAL`.
+- [ ] Alembic под Postgres: прогнать `upgrade head` на Neon, поправить миграции при
+  необходимости (сейчас диалект-агностичны — проверить).
+- [ ] Vercel: `vercel.json`, env-секреты (`BOT_TOKEN`, `DAD_ID`, `SON_ID`,
+  `DATABASE_URL`), публичный HTTPS-URL, деплой + smoke (бот отвечает на `/start`).
+- [ ] Обновить README/AGENTS под webhook + Neon; Fly-раздел → «отклонено».
 
 ## 7. Testing gate
 
 - `tests/unit/test_*.py` на каждый use-case (in-memory repo, без сети/БД).
-- Polling-recovery: `offset = last_id + 1` после рестарта (интеграционный, позже).
+- Webhook: обработчик отвечает 200 быстро и идемпотентно (повтор апдейта не
+  дублирует эффект); интеграционный smoke — позже.
 - Gate перед коммитом: `ruff check + mypy + pytest -q`.
 
 ## 8. Risks
@@ -122,14 +139,17 @@ src/
 | Риск | Митигация |
 |---|---|
 | Ozon меняет верстку/режет ботов | Не парсим вовсе на MVP, только ручная цена |
-| Render sleep / Railway платность | Только Fly.io free для прод-бота |
-| 256MB RAM на Fly | Один воркер, без веб-сервера; мониторинг OOM |
-| Потеря SQLite без volume | `mount /data`, WAL, бэкап дампом перед деплоем |
-| Апдейты старше 24ч | Потеряны по дизайну Telegram API — приемлемо при 24/7 |
+| Vercel Hobby — только non-commercial | Семейный бот — личное использование, ок |
+| Vercel недоступен из РБ | Проверить регистрацию **до** реализации; fallback — бесплатная VM/no-card хост |
+| Bundle-лимит Vercel 250 МБ | `asyncpg` лёгкий; следить за размером, без `sqlite` в проде |
+| Cold start функции | Тёплый старт на каждый апдейт; Telegram ретраит при таймауте |
+| Лимиты Neon free | Маленький объём (2 пользователя); autosuspend, storage < лимита |
+| Дрейф SQLite↔Postgres | Миграции диалект-агностичны + интеграционный тест |
+| Апдейты при простое | Serverless просыпается на запрос; Telegram ретраит с backoff |
 
 ## 9. Next action
 
-P1–P3 закрыты, P4 (SPEC-004) готов кодом: boot-миграции, Docker/entrypoint,
-`fly.toml`, Makefile-таргеты и runbook. Остался живой деплой на Fly.io
-(`make fly-init` → `fly secrets set` → `make deploy`) и проверка рестарта
-(догон апдейтов < 24ч, БД на месте) — нужен Fly-аккаунт.
+P1–P3 закрыты; P4 (Fly.io) отклонён — платно. Прод-хостинг переносится на **Vercel
+(Hobby, webhook) + Neon Postgres** — это фаза **P5 / SPEC-005**. Первый шаг: проверить,
+что Vercel регистрируется из РБ, затем завести SPEC-005 и сделать webhook-адаптер +
+переход на asyncpg/Neon. Fly-деплой подлежит удалению (`fly apps destroy`).
