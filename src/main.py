@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from pydantic import ValidationError
 
 from src.adapters.persistence.sqlite_repo import SqliteItemRepository
 from src.adapters.telegram.routers import build_root_router
@@ -19,7 +21,15 @@ logger = logging.getLogger(__name__)
 
 
 async def amain() -> None:
-    settings = get_settings()
+    try:
+        settings = get_settings()
+    except ValidationError as exc:
+        print(
+            "Invalid config: copy .env.example to .env and fill "
+            f"BOT_TOKEN, DAD_ID, SON_ID.\nDetails: {exc}",
+            file=sys.stderr,
+        )
+        raise SystemExit(2) from exc
     setup_logging(settings.log_level)
 
     engine = create_engine(settings.database_url)
