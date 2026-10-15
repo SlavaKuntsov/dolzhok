@@ -27,5 +27,9 @@ class IItemRepository(ABC):
         """Return newest items first."""
 
     @abstractmethod
+    async def list_all(self) -> list[Item]:
+        """Return every item (newest first). Used for derived debt/stats."""
+
+    @abstractmethod
     async def update(self, item: Item) -> Item:
         """Persist changes of an existing item."""

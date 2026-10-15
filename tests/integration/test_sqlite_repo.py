@@ -38,3 +38,4 @@ async def test_sqlite_roundtrip(tmp_path: Path) -> None:
 
     recent = await repo.list_recent(limit=10)
     assert len(recent) == 1
+    assert len(await repo.list_all()) == 1

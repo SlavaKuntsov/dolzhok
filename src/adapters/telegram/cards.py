@@ -8,7 +8,7 @@ from typing import Any
 from aiogram.enums import ParseMode
 
 from src.adapters.telegram.keyboards import item_keyboard
-from src.domain.entities import PIPELINE, Item, ItemStatus
+from src.domain.entities import PIPELINE, Item, ItemStatus, PaymentType
 from src.domain.value_objects import Money
 
 STATUS_LABEL: dict[ItemStatus, str] = {
@@ -16,6 +16,11 @@ STATUS_LABEL: dict[ItemStatus, str] = {
     ItemStatus.ORDERED: "заказано",
     ItemStatus.RECEIVED: "получено",
     ItemStatus.CANCELLED: "отменено",
+}
+
+PAYMENT_LABEL: dict[PaymentType, str] = {
+    PaymentType.PREPAID: "💳 предоплата",
+    PaymentType.POSTPAID: "💳 постоплата",
 }
 
 
@@ -32,14 +37,24 @@ def _pipeline_line(item: Item) -> str:
     return " → ".join(parts)
 
 
+def _payment_suffix(item: Item) -> str:
+    if item.is_returned:
+        return " · ↩️ возврат"
+    if item.payment is not None:
+        return f" · {PAYMENT_LABEL[item.payment]}"
+    return ""
+
+
 def _money_line(item: Item) -> str:
+    suffix = _payment_suffix(item)
     if item.price_kop is None:
         line = "💰 цены пока нет"
-        return f"{line} · 🔢 ×{item.qty}" if item.qty > 1 else line
+        return f"{line} · 🔢 ×{item.qty}{suffix}" if item.qty > 1 else f"{line}{suffix}"
     price = Money(item.price_kop).format_rub()
     if item.qty > 1:
-        return f"💰 {price} × {item.qty} = {Money(item.price_kop * item.qty).format_rub()}"
-    return f"💰 {price}"
+        total = Money(item.price_kop * item.qty).format_rub()
+        return f"💰 {price} × {item.qty} = {total}{suffix}"
+    return f"💰 {price}{suffix}"
 
 
 def format_item_card(item: Item) -> str:

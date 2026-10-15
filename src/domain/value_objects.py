@@ -23,7 +23,7 @@ class Money:
     def format_rub(self) -> str:
         rubles, kop = divmod(self.amount_kop, 100)
         grouped = f"{rubles:,}".replace(",", " ")
-        return f"{grouped},{kop:02d} ₽"
+        return f"{grouped},{kop:02d} BYN"
 
 
 def parse_price_to_kop(text: str) -> int:
@@ -33,7 +33,7 @@ def parse_price_to_kop(text: str) -> int:
         DomainError: if the input is not a valid non-negative price.
     """
     cleaned = text.strip().replace("\u00a0", " ").replace("\u2009", " ")
-    cleaned = re.sub(r"\s*(₽|руб\.?|rub)\s*$", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*(BYN|руб\.?|rub)\s*$", "", cleaned, flags=re.IGNORECASE)
     if not _PRICE_RE.match(cleaned):
         raise DomainError(f"invalid price: {text!r}")
     normalized = cleaned.replace(" ", "").replace(",", ".")

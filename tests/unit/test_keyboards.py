@@ -9,7 +9,7 @@ from src.adapters.telegram.keyboards import (
     item_keyboard,
     main_menu_keyboard,
 )
-from src.domain.entities import Item, ItemStatus
+from src.domain.entities import Item, ItemStatus, PaymentType
 
 
 def test_main_menu_has_all_actions() -> None:
@@ -34,12 +34,36 @@ def test_item_keyboard_shows_all_statuses_current_inert() -> None:
     assert last_row == ["price:1", "qty:1"]
 
 
-def test_received_card_has_reopen_button() -> None:
+def test_received_card_has_reopen_button_and_payment() -> None:
     item = Item(id=2, url="https://ozon.ru/product/x-2", created_by=1, status=ItemStatus.RECEIVED)
     keyboard = item_keyboard(item, for_son=True)
     assert keyboard is not None
     payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
-    assert payloads == ["st:2:ORDERED"]
+    assert payloads == ["st:2:ORDERED", "pay:2:PREPAID", "pay:2:POSTPAID"]
+
+
+def test_ordered_card_shows_payment_current_inert() -> None:
+    item = Item(
+        id=3,
+        url="https://ozon.ru/product/x-3",
+        created_by=1,
+        status=ItemStatus.ORDERED,
+        payment=PaymentType.PREPAID,
+    )
+    keyboard = item_keyboard(item, for_son=True)
+    assert keyboard is not None
+    payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
+    assert "nooppay:3" in payloads
+    assert "pay:3:POSTPAID" in payloads
+    assert "pay:3:PREPAID" not in payloads
+
+
+def test_new_card_has_no_payment_row() -> None:
+    item = Item(id=4, url="https://ozon.ru/product/x-4", created_by=1)
+    keyboard = item_keyboard(item, for_son=True)
+    assert keyboard is not None
+    payloads = [b.callback_data for row in keyboard.inline_keyboard for b in row]
+    assert not any(str(p).startswith("pay:") for p in payloads)
 
 
 def test_item_keyboard_hidden_for_dad_and_cancelled() -> None:

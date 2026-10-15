@@ -74,6 +74,11 @@ class SqliteItemRepository(IItemRepository):
             )
             return [_to_entity(m) for m in result.scalars().all()]
 
+    async def list_all(self) -> list[Item]:
+        async with self._sessions() as session:
+            result = await session.execute(select(ItemModel).order_by(ItemModel.id.desc()))
+            return [_to_entity(m) for m in result.scalars().all()]
+
     async def update(self, item: Item) -> Item:
         assert item.id is not None, "cannot update item without id"
         async with self._sessions() as session:

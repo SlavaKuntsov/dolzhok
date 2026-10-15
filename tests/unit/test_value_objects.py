@@ -15,7 +15,7 @@ from src.domain.value_objects import Money, parse_price_to_kop
         ("1299.5", 129950),
         ("1299.99", 129999),
         ("0", 0),
-        ("  250 ₽ ", 25000),
+        ("  250 BYN ", 25000),
     ],
 )
 def test_parse_price_valid(text: str, expected: int) -> None:
@@ -34,4 +34,4 @@ def test_money_rejects_negative() -> None:
 
 
 def test_money_format_rub() -> None:
-    assert Money(129950).format_rub() == "1 299,50 ₽"
+    assert Money(129950).format_rub() == "1 299,50 BYN"

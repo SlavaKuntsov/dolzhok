@@ -16,13 +16,14 @@ from src.adapters.telegram.cards import card_message
 from src.adapters.telegram.fsm import PriceStates, QtyStates
 from src.adapters.telegram.keyboards import main_menu_keyboard
 from src.domain import ozon
-from src.domain.entities import ItemStatus
+from src.domain.entities import ItemStatus, PaymentType
 from src.domain.errors import DomainError
 from src.domain.interfaces import IItemRepository
 from src.domain.value_objects import parse_price_to_kop
 from src.infrastructure.config import Settings
 from src.use_cases.add_item import AddItemRequest, AddItemUseCase
 from src.use_cases.change_status import ChangeStatusRequest, ChangeStatusUseCase
+from src.use_cases.set_payment import SetPaymentRequest, SetPaymentUseCase
 from src.use_cases.set_price import SetPriceRequest, SetPriceUseCase
 from src.use_cases.set_quantity import SetQuantityRequest, SetQuantityUseCase
 
@@ -250,8 +251,37 @@ def build_items_router(settings: Settings) -> Router:
     async def change_status_denied(callback: CallbackQuery) -> None:
         await callback.answer("Статусы меняет только сын 😉", show_alert=True)
 
+    @router.callback_query(F.data.startswith("pay:"), F.from_user.id == son_id)
+    async def change_payment(callback: CallbackQuery, item_repo: IItemRepository) -> None:
+        assert callback.data is not None
+        if not isinstance(callback.message, Message):
+            await callback.answer("Сообщение недоступно.", show_alert=True)
+            return
+        try:
+            _, raw_id, raw_payment = callback.data.split(":")
+            request = SetPaymentRequest(item_id=int(raw_id), payment=PaymentType(raw_payment))
+        except (ValueError, KeyError):
+            await callback.answer("Битые данные кнопки.", show_alert=True)
+            return
+        try:
+            response = await SetPaymentUseCase(item_repo).execute(request)
+        except DomainError as exc:
+            await callback.answer(str(exc), show_alert=True)
+            return
+        item = response.item
+        await callback.message.edit_text(**card_message(item, for_son=True))
+        await callback.answer("Оплата сохранена ✅")
+
+    @router.callback_query(F.data.startswith("pay:"))
+    async def change_payment_denied(callback: CallbackQuery) -> None:
+        await callback.answer("Оплату отмечает только сын 😉", show_alert=True)
+
     @router.callback_query(F.data.startswith("noop:"))
     async def noop(callback: CallbackQuery) -> None:
         await callback.answer("Уже в этом статусе")
+
+    @router.callback_query(F.data.startswith("nooppay:"))
+    async def noop_payment(callback: CallbackQuery) -> None:
+        await callback.answer("Уже выбрано")
 
     return router

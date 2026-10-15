@@ -1,7 +1,7 @@
 """Tests for compact HTML card rendering (Russian user-facing text)."""
 
 from src.adapters.telegram.cards import format_item_card
-from src.domain.entities import Item, ItemStatus
+from src.domain.entities import Item, ItemStatus, PaymentType
 
 
 def test_format_item_card_new_no_price() -> None:
@@ -24,7 +24,7 @@ def test_format_item_card_with_title_price_qty() -> None:
     assert format_item_card(item) == (
         "#2 · 1 новое → 2 <b><u>заказано</u></b> → 3 получено\n"
         "Втулка Д16мм\n"
-        "💰 1 299,50 ₽ × 2 = 2 599,00 ₽ · 🔗 https://ozon.by/t/xyz"
+        "💰 1 299,50 BYN × 2 = 2 599,00 BYN · 🔗 https://ozon.by/t/xyz"
     )
 
 
@@ -50,3 +50,29 @@ def test_format_item_card_qty_no_price() -> None:
 def test_format_item_card_cancelled() -> None:
     item = Item(id=7, url="https://ozon.ru/product/x-7", created_by=1, status=ItemStatus.CANCELLED)
     assert format_item_card(item).startswith("#7 · 🚫 отменено\n")
+
+
+def test_format_item_card_prepaid_ordered() -> None:
+    item = Item(
+        id=8,
+        url="https://ozon.ru/product/x-8",
+        created_by=1,
+        price_kop=129950,
+        status=ItemStatus.ORDERED,
+        payment=PaymentType.PREPAID,
+    )
+    assert "💰 1 299,50 BYN · 💳 предоплата" in format_item_card(item)
+
+
+def test_format_item_card_returned() -> None:
+    item = Item(
+        id=9,
+        url="https://ozon.ru/product/x-9",
+        created_by=1,
+        price_kop=129950,
+        status=ItemStatus.CANCELLED,
+        payment=PaymentType.PREPAID,
+    )
+    card = format_item_card(item)
+    assert card.startswith("#9 · 🚫 отменено\n")
+    assert "💰 1 299,50 BYN · ↩️ возврат" in card

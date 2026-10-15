@@ -72,6 +72,21 @@ class Item:
             raise DomainError(f"item is already {self.status.value}")
         self.status = target
 
+    def set_payment(self, payment: PaymentType) -> None:
+        self.payment = payment
+
+    @property
+    def total_kop(self) -> int | None:
+        """Line total (price × qty) in kopecks, or None when price is unknown."""
+        if self.price_kop is None:
+            return None
+        return self.price_kop * self.qty
+
     @property
     def is_closed(self) -> bool:
         return self.status in (ItemStatus.RECEIVED, ItemStatus.CANCELLED)
+
+    @property
+    def is_returned(self) -> bool:
+        """Prepaid item that got cancelled — money came back, never counts as debt."""
+        return self.status is ItemStatus.CANCELLED and self.payment is PaymentType.PREPAID

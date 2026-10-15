@@ -24,8 +24,10 @@ class InMemoryItemRepository(IItemRepository):
         return next((i for i in self._store.values() if i.url == url), None)
 
     async def list_recent(self, limit: int = 10, offset: int = 0) -> list[Item]:
-        ordered = sorted(self._store.values(), key=lambda i: i.id or 0, reverse=True)
-        return ordered[offset : offset + limit]
+        return (await self.list_all())[offset : offset + limit]
+
+    async def list_all(self) -> list[Item]:
+        return sorted(self._store.values(), key=lambda i: i.id or 0, reverse=True)
 
     async def update(self, item: Item) -> Item:
         assert item.id is not None
