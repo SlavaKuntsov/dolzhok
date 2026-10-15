@@ -7,3 +7,9 @@ class PriceStates(StatesGroup):
     """Waiting for son to type the item price. State data: {"item_id": int}."""
 
     waiting_price = State()
+
+
+class QtyStates(StatesGroup):
+    """Waiting for son to type the item quantity. State data: {"item_id": int}."""
+
+    waiting_qty = State()

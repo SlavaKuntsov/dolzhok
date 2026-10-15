@@ -30,7 +30,14 @@ def format_item_card(item: Item) -> str:
     lines = [f"#{item.id} {emoji} {label}"]
     if item.title:
         lines += ["", item.title]
-    lines += ["", f"🔗 {item.url}", f"💰 {price}"]
+    lines += ["", f"🔗 {item.url}"]
+    if item.price_kop is not None and item.qty > 1:
+        total = Money(item.price_kop * item.qty).format_rub()
+        lines.append(f"💰 {price} × {item.qty} = {total}")
+    else:
+        lines.append(f"💰 {price}")
+        if item.qty > 1:
+            lines.append(f"🔢 Количество: {item.qty}")
     if item.sku:
         lines.append(f"🏷 Артикул {item.sku}")
     return "\n".join(lines)

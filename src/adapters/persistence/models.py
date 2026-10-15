@@ -20,6 +20,7 @@ class ItemModel(Base):
     sku: Mapped[str | None] = mapped_column(String(64), nullable=True)
     title: Mapped[str | None] = mapped_column(String(512), nullable=True)
     price_kop: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    qty: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="NEW", index=True)
     payment: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)

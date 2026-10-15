@@ -29,3 +29,16 @@ def test_format_item_card_with_price() -> None:
 def test_format_item_line() -> None:
     item = Item(id=3, url="https://ozon.ru/product/x-3", created_by=1, price_kop=50000)
     assert format_item_line(item) == "#3 🆕 500,00 ₽ https://ozon.ru/product/x-3"
+
+
+def test_format_item_card_with_qty_and_price() -> None:
+    item = Item(
+        id=4, url="https://ozon.ru/product/x-4", created_by=1, price_kop=129950, qty=2
+    )
+    assert "1 299,50 ₽ × 2 = 2 599,00 ₽" in format_item_card(item)
+
+
+def test_format_item_card_with_qty_no_price() -> None:
+    item = Item(id=5, url="https://ozon.ru/product/x-5", created_by=1, qty=3)
+    card = format_item_card(item)
+    assert "🔢 Количество: 3" in card

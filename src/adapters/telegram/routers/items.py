@@ -9,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from src.adapters.telegram.cards import format_item_card
-from src.adapters.telegram.fsm import PriceStates
+from src.adapters.telegram.fsm import PriceStates, QtyStates
 from src.adapters.telegram.keyboards import item_keyboard, main_menu_keyboard
 from src.domain import ozon
 from src.domain.entities import ItemStatus
@@ -19,6 +19,7 @@ from src.infrastructure.config import Settings
 from src.use_cases.add_item import AddItemRequest, AddItemUseCase
 from src.use_cases.change_status import ChangeStatusRequest, ChangeStatusUseCase
 from src.use_cases.set_price import SetPriceRequest, SetPriceUseCase
+from src.use_cases.set_quantity import SetQuantityRequest, SetQuantityUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,56 @@ def build_items_router(settings: Settings) -> Router:
     @router.callback_query(F.data.startswith("price:"))
     async def ask_price_denied(callback: CallbackQuery) -> None:
         await callback.answer("Цены ставит только сын 😉", show_alert=True)
+
+    @router.callback_query(F.data.startswith("qty:"), F.from_user.id == son_id)
+    async def ask_qty(
+        callback: CallbackQuery, state: FSMContext, item_repo: IItemRepository
+    ) -> None:
+        assert callback.data is not None
+        if not isinstance(callback.message, Message):
+            await callback.answer("Сообщение недоступно.", show_alert=True)
+            return
+        try:
+            item_id = int(callback.data.split(":")[1])
+        except (IndexError, ValueError):
+            await callback.answer("Битые данные кнопки.", show_alert=True)
+            return
+        item = await item_repo.get_by_id(item_id)
+        if item is None or item.is_closed:
+            await callback.answer("Товар недоступен.", show_alert=True)
+            return
+        await state.set_state(QtyStates.waiting_qty)
+        await state.update_data(item_id=item_id)
+        await callback.message.answer(
+            f"Введи количество для #{item_id} (например, 2). /cancel — отмена."
+        )
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("qty:"))
+    async def ask_qty_denied(callback: CallbackQuery) -> None:
+        await callback.answer("Количество меняет только сын 😉", show_alert=True)
+
+    @router.message(QtyStates.waiting_qty, F.text)
+    async def receive_qty(
+        message: Message, state: FSMContext, item_repo: IItemRepository
+    ) -> None:
+        assert message.text is not None
+        data = await state.get_data()
+        item_id = int(data["item_id"])
+        try:
+            response = await SetQuantityUseCase(item_repo).execute(
+                SetQuantityRequest(item_id=item_id, qty_text=message.text)
+            )
+        except DomainError as exc:
+            await message.answer(f"Не похоже на количество: {exc}\nПопробуй еще раз или /cancel.")
+            return
+        await state.clear()
+        item = response.item
+        await message.answer(
+            format_item_card(item),
+            reply_markup=item_keyboard(item, for_son=True),
+            disable_web_page_preview=True,
+        )
 
     @router.message(PriceStates.waiting_price, F.text)
     async def receive_price(

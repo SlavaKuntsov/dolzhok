@@ -19,6 +19,7 @@ def _to_entity(model: ItemModel) -> Item:
         sku=model.sku,
         title=model.title,
         price_kop=model.price_kop,
+        qty=model.qty,
         status=ItemStatus(model.status),
         payment=PaymentType(model.payment) if model.payment else None,
         created_by=model.created_by,
@@ -33,6 +34,7 @@ def _to_model(entity: Item) -> ItemModel:
         sku=entity.sku,
         title=entity.title,
         price_kop=entity.price_kop,
+        qty=entity.qty,
         status=entity.status.value,
         payment=entity.payment.value if entity.payment else None,
         created_by=entity.created_by,
@@ -83,6 +85,7 @@ class SqliteItemRepository(IItemRepository):
                 model.sku = fresh.sku
                 model.title = fresh.title
                 model.price_kop = fresh.price_kop
+                model.qty = fresh.qty
                 model.status = fresh.status
                 model.payment = fresh.payment
             return _to_entity(model)

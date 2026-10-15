@@ -39,6 +39,7 @@ def item_keyboard(item: Item, *, for_son: bool) -> InlineKeyboardMarkup | None:
     if status_row:
         rows.append(status_row)
     rows.append([InlineKeyboardButton(text="✏️ Цена", callback_data=f"price:{item.id}")])
+    rows.append([InlineKeyboardButton(text="🔢 Кол-во", callback_data=f"qty:{item.id}")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

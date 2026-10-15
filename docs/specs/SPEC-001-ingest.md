@@ -22,6 +22,7 @@ and shows a card to both chats (inline buttons only for son).
 - Given `ozo.ru/abc` short link When ingested Then resolved to canonical `ozon.ru` URL.
 - Given same URL twice When ingested Then second returns existing `id` (no duplicate).
 - Given son presses `✏️ Цена` When FSM input `«1 299,50»` Then `price_kop=129950`.
+- Given son presses `🔢 Кол-во` When FSM input `«3»` Then `qty=3` (default 1).
 - Given non-son whitelisted user triggers a son-only button When received Then `alert` + no state change.
 - Given dad sends a new URL Then son receives a copy; Given son sends Then dad receives a copy.
 

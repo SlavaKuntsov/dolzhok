@@ -24,6 +24,7 @@ def test_item_keyboard_new_has_transitions_and_price() -> None:
     assert "st:1:TO_ORDER" in payloads
     assert "st:1:CANCELLED" in payloads
     assert "price:1" in payloads
+    assert "qty:1" in payloads
 
 
 def test_item_keyboard_hidden_for_dad_and_closed() -> None:

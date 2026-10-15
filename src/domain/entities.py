@@ -46,6 +46,7 @@ class Item:
     sku: str | None = None
     title: str | None = None
     price_kop: int | None = None
+    qty: int = 1
     status: ItemStatus = ItemStatus.NEW
     payment: PaymentType | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -55,11 +56,18 @@ class Item:
             raise DomainError("item url must not be empty")
         if self.price_kop is not None and self.price_kop < 0:
             raise DomainError("item price must be non-negative")
+        if self.qty < 1:
+            raise DomainError("item qty must be at least 1")
 
     def set_price(self, price_kop: int) -> None:
         if price_kop < 0:
             raise DomainError("item price must be non-negative")
         self.price_kop = price_kop
+
+    def set_qty(self, qty: int) -> None:
+        if qty < 1:
+            raise DomainError("item qty must be at least 1")
+        self.qty = qty
 
     def transition(self, target: ItemStatus) -> None:
         if target not in _ALLOWED_TRANSITIONS[self.status]:
