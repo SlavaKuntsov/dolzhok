@@ -54,17 +54,47 @@ docs/specs/         # SPEC-00X на каждую фичу
 
 ## Deploy (Fly.io free, ~$0)
 
+Один always-on воркер, SQLite на volume `/data`. HTTP-порта нет (long polling).
+
+### Первичная настройка
+
 ```bash
-fly launch --no-deploy
-fly volumes create data --size 1 --region ams
+make fly-init        # fly launch --no-deploy + volume data 1GB (ams)
 fly secrets set BOT_TOKEN=... DAD_ID=... SON_ID=...
-fly deploy
-fly logs
+make deploy          # fly deploy
+make logs            # проверить, что миграции применились и бот опросил Telegram
 ```
 
-- БД: `/data/bot.db` (WAL), volume переживает рестарты.
-- Бот — воркер long-polling, HTTP нет.
-- Пропуски < 24ч Telegram отдает сам через `getUpdates` после рестарта.
-- Бэкап: `fly ssh console -C "sqlite3 /data/bot.db .dump" > backup.sql`
+- `fly launch --no-deploy` берёт готовые `Dockerfile` + `fly.toml` (регион `ams`,
+  volume `data` → `/data`, `DATABASE_URL=sqlite+aiosqlite:////data/bot.db`).
+- Секреты (`BOT_TOKEN`, `DAD_ID`, `SON_ID`) — только через `fly secrets set`,
+  в образ не попадают (`.dockerignore` исключает `.env`).
+- На каждом старте контейнер выполняет `alembic upgrade head` против
+  `DATABASE_URL` (`docker-entrypoint.sh`), затем `python -m src.main`.
+
+### Runbook
+
+| Задача | Команда |
+|---|---|
+| Логи в реальном времени | `make logs` (`fly logs`) |
+| Статус машины | `fly status` |
+| SSH на машину | `fly ssh console` |
+| Бэкап БД (dated dump) | `make backup` → `backup-YYYY-MM-DD.sql` |
+| Восстановление | `make restore FILE=backup-YYYY-MM-DD.sql` |
+| Ручной рестарт | `make restart` (`fly machines restart`) |
+| Обновление кода | `make deploy` (тот же volume, БД на месте) |
+
+- **Догон после рестарта.** `long polling` + `drop_pending_updates=False`:
+  Telegram хранит неподтверждённые апдейты < 24ч, бот забирает их после
+  пробуждения. Пропуски > 24ч теряются по дизайну Telegram API.
+- **Миграции.** Схема применяется автоматически на старте. Если volume заведён
+  до P4 (таблицы созданы через `create_all`, без `alembic_version`) — один раз
+  проставь версию: `fly ssh console -C "uv run alembic stamp head"`.
+- **Восстановление.** `make restore` сначала удаляет текущий `/data/bot.db*`
+  (`.dump` не содержит `DROP TABLE`), заливает бэкап в пустую БД и перезапускает
+  машину. Делай это в простое: до перезапуска бот пишет в старый (удалённый) файл.
+- **Бэкап перед деплоем** со сменой схемы: `make backup`, затем `make deploy`.
+- Alembic читает `DATABASE_URL` из окружения; локально он совпадает с `.env` по
+  умолчанию, но если меняешь путь в `.env` — экспортируй его и для `make migrate`.
 
 Замена SQLite → Turso: реализовать `IItemRepository` на `libsql`, остальное не трогать.

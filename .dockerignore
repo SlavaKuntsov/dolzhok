@@ -1,0 +1,26 @@
+# Keep secrets and local/dev artifacts out of the image.
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite*
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+data/
+backup-*.sql
+.codegraph/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+docs/
+tests/
+AGENTS.md
+Dockerfile
+docker-compose*.yml
+fly.toml

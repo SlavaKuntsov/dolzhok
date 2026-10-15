@@ -1,4 +1,4 @@
-.PHONY: sync lint typecheck test check migrate revision run deploy logs backup clean
+.PHONY: sync lint typecheck test check migrate revision run deploy fly-init logs backup restore restart clean
 
 # Install/sync dependencies from lockfile
 sync:
@@ -37,6 +37,12 @@ run:
 deploy:
 	fly deploy
 
+# First-time Fly.io setup (no deploy): app + volume + remind about secrets
+fly-init:
+	fly launch --no-deploy --copy-config
+	fly volumes create data --size 1 --region ams
+	@echo "Next: fly secrets set BOT_TOKEN=... DAD_ID=... SON_ID=...  &&  make deploy"
+
 # Tail production logs on Fly.io
 logs:
 	fly logs
@@ -44,6 +50,18 @@ logs:
 # Dump production SQLite to dated backup file
 backup:
 	fly ssh console -C "sqlite3 /data/bot.db .dump" > backup-$$(date +%F).sql
+
+# Restore a dump into the volume DB: make restore FILE=backup-2026-10-15.sql
+# A .dump has no DROP TABLE, so remove the current file(s) first (fresh inode),
+# load the dump into an empty DB, then restart the machine to reopen it.
+restore:
+	@test -n "$(FILE)" || { echo "usage: make restore FILE=backup-YYYY-MM-DD.sql"; exit 1; }
+	cat $(FILE) | fly ssh console -C "rm -f /data/bot.db /data/bot.db-wal /data/bot.db-shm && sqlite3 /data/bot.db"
+	fly machines restart
+
+# Restart the app machine (reopens the volume DB, drains queued updates)
+restart:
+	fly machines restart
 
 # Remove Python bytecode caches
 clean:

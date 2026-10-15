@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from logging.config import fileConfig
 from pathlib import Path
 
@@ -14,6 +15,12 @@ from alembic import context
 from src.adapters.persistence.models import Base
 
 config = context.config
+
+# Prefer the runtime DATABASE_URL (Fly secret / shell env) over the alembic.ini
+# default so the container migrates the mounted volume DB, not a local path.
+_env_url = os.environ.get("DATABASE_URL")
+if _env_url:
+    config.set_main_option("sqlalchemy.url", _env_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
