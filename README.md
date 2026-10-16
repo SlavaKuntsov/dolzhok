@@ -53,10 +53,11 @@ src/use_cases/      # add_item, set_price, set_payment, change_status, calc_debt
 src/adapters/telegram/     # routers, keyboards, fsm
 src/adapters/persistence/  # sqlalchemy models + SqliteItem/RepaymentRepository
 src/infrastructure/ # config, db, logging
-docs/specs/         # SPEC-00X на каждую фичу
+docs/adr/           # ADR: зафиксированные решения
+docs/agents/        # настройка скиллов (issue-tracker, triage-labels, domain)
 ```
 
-Подробно: `docs/PLAN.md`, стиль: `AGENTS.md`.
+Язык — `GLOSSARY.md`; решения — `docs/adr/`; спеки и тикеты — GitHub Issues; стиль — `AGENTS.md`.
 
 ## Deploy (Fly.io free, ~$0)
 
