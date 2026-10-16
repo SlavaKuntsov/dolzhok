@@ -1,5 +1,5 @@
 # Fly.io app config for a single long-polling worker (no HTTP service).
-# Deploy: docs/PLAN.md P4 / docs/specs/SPEC-004-deploy.md / README "Deploy".
+# Deploy: ADR-0001 (Vercel+Neon) / GitHub issue «P6 — Vercel webhook + Neon Postgres» / README "Deploy".
 app = "dolzhok"
 primary_region = "ams"
 
