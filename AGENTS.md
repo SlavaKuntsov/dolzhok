@@ -43,14 +43,9 @@ infrastructure/ # config, engine/session, logging
 
 ## 4. Workflow — скиллы mattpocock (`.agents/skills/`)
 
-1. `/grill-with-docs` — уточнить замысел; язык пишется в `GLOSSARY.md`, решения — в `docs/adr/`.
-2. `/to-spec` — спека в GitHub Issue (трекер — `docs/agents/issue-tracker.md`); `/to-tickets` — нарезка на трассирующие тикеты.
-3. `/implement` (ведёт `/tdd`) — вертикальный срез: `domain` + `use_case` + `tests/unit/test_<usecase>.py` с `InMemory*` (без БД/сети), затем `adapters` (repo/handler) + `alembic revision` если схема менялась.
-4. `/code-review` — ревью диффа (Standards + Spec) перед коммитом; `/pr` — тело PR.
+Стадии, режимы, кто что вызывает и в каком порядке — `docs/dev-pipeline.md`, единственный источник.
 
-Вертикальный срез > горизонтальный слой. Не строить «весь telegram» без use-case и теста.
-
-Сквозной пайплайн стадий (таблица, режимы, кто вызывается) — `docs/dev-pipeline.md`.
+Вертикальный срез > горизонтальный слой. Не строить «весь telegram» без use-case и теста: `domain` + `use_case` + `tests/unit/test_<usecase>.py` с `InMemory*` (без БД/сети), затем `adapters` (repo/handler) + `alembic revision` если схема менялась.
 
 ## 5. Telegram-правила
 
@@ -64,8 +59,8 @@ infrastructure/ # config, engine/session, logging
 - Conventional Commits: `feat|fix|chore|docs|test|refactor: ...` (lowercase, без точки).
 - Малые диффы, один use-case = один коммит(ы). Пуш/PR только по просьбе.
 - Никогда не коммитить `.env`, `*.db`, `*.sqlite*`. Только `.env.example`.
-- **Ветка на работу.** Любой тикет/спека — в ветке от свежего `main`: `feat/<phase>-<slug>` (или `fix/...`). В `main` напрямую не коммитим. Скилл `/implement` коммитит в **текущую** ветку — перед стартом сделай `git switch -c feat/<phase>-<slug> origin/main`.
-- **Спека ≠ тикет.** Issue-спека (таблица/чеклист задач, как SPEC-006) не граббится агентом как один тикет: сначала `/to-tickets` → sub-issues с блокировками → `/triage`. Реализация: вся спека — `/implement-spec <spec>` (integration branch); один тикет — `/implement <ticket>`.
+- **Ветка на работу.** Любой тикет/спека — в ветке от свежего `main`: `feat/<phase>-<slug>`, `fix/<slug>` или `chore/<slug>`. В `main` напрямую не коммитим. Скилл `/implement` коммитит в **текущую** ветку — перед стартом сделай `git switch -c feat/<phase>-<slug> origin/main`.
+- **Спека ≠ тикет.** Issue-спека (как SPEC-006) не граббится как один тикет: сначала нарезка на sub-issues с блокировками (см. `docs/dev-pipeline.md`). Реализация: один тикет — `/implement`, вся спека — `/implement-spec`.
 
 ## 7. Definition of Done
 
