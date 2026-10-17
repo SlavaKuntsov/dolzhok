@@ -1,0 +1,32 @@
+# Keep secrets, local state and dev artifacts out of the Vercel upload.
+# `vercel deploy` reads .vercelignore only (it does not honour .gitignore), so a
+# local unix socket such as .codegraph/daemon.sock would otherwise abort the
+# upload with "Unknown system error -102".
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite*
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+data/
+backup-*.sql
+.codegraph/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+docs/
+tests/
+.agents/
+AGENTS.md
+Dockerfile
+docker-entrypoint.sh
+docker-compose*.yml
+fly.toml
+.DS_Store

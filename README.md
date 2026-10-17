@@ -121,6 +121,10 @@ make deploy
   `X-Telegram-Bot-Api-Secret-Token` header; foreign requests get `403`. Without a
   secret the endpoint is open — in production the secret is mandatory (the app logs
   a warning at startup).
+- **Upload ignores.** `vercel deploy` reads `.vercelignore` only (it does not
+  honour `.gitignore`), so local-only paths stay out of the upload. This matters
+  for `.codegraph/`: its `daemon.sock` is a unix socket and `open()` on it aborts
+  the upload with `Unknown system error -102`.
 - **Schema — Alembic only (on both dialects).** `init_db` does not create tables
   (only `PRAGMA journal_mode=WAL` for SQLite); if migrations were not run, startup
   fails with a hint to run `make migrate`. Otherwise tables would appear without
