@@ -47,8 +47,12 @@ A non-negative amount held in kopecks (minor units), displayed as roubles like `
 _Avoid_: amount, value, price
 
 **Debt**:
-Money the customer owes the executor for prepaid items still in work (ordered or received). Shown as «Заказчик должен».
+Money the customer owes the executor: prepaid items still in work (ordered or received) plus the manual debt. Shown broken down as «Долг по товарам» + «Долги за прошлое» for the executor.
 _Avoid_: total, amount owed, balance, sum
+
+**Manual debt**:
+Money from past orders that were never tracked as items, entered by hand as one running figure. It is signed: negative means the customer overpaid on past debt. It counts in the debt but is not an Item and never appears in the item list.
+_Avoid_: item, old order, extra debt, adjustment
 
 **Pending postpaid**:
 Postpaid ordered items the customer has not paid for yet. Explicitly not part of the debt. Shown as «Ждет постоплаты».
@@ -59,7 +63,7 @@ One cash transfer from the customer to the executor that shrinks the running bal
 _Avoid_: payment, transfer, transaction, instalment
 
 **Balance**:
-Debt minus repayments. Positive means the customer still owes; zero means settled. Shown as «Остаток».
+Debt (items plus manual debt) minus repayments. Positive means the customer still owes; zero means settled. Shown as «Остаток».
 _Avoid_: remainder, debt, difference
 
 **Advance**:

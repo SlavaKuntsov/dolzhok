@@ -26,6 +26,20 @@ class Money:
         return f"{grouped},{kop:02d} BYN"
 
 
+def parse_signed_price_to_kop(text: str) -> int:
+    """Parse ``1 299,50`` or ``-500`` into signed kopecks.
+
+    Raises:
+        DomainError: if the input is not a valid amount.
+    """
+    cleaned = text.strip()
+    sign = 1
+    if cleaned[:1] in ("-", "\u2212"):
+        sign = -1
+        cleaned = cleaned[1:].strip()
+    return sign * parse_price_to_kop(cleaned)
+
+
 def parse_price_to_kop(text: str) -> int:
     """Parse human price input like ``1 299,50`` into kopecks (129950).
 

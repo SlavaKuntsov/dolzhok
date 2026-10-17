@@ -21,45 +21,92 @@ def _repayment(id_: int, amount: int, *, note: str | None = None, by: int = 9) -
     return Repayment(id=id_, amount_kop=amount, created_by=by, note=note, created_at=_WHEN)
 
 
-def test_debt_text_with_repayments() -> None:
-    debt = CalcDebtResponse(debt_kop=259900, debt_count=1, postpaid_kop=0, postpaid_count=0)
-    balance = CalcBalanceResponse(
-        debt_kop=259900,
-        debt_count=1,
-        repaid_kop=100000,
-        repaid_count=1,
-        balance_kop=159900,
-        advance_kop=0,
+def _debt(
+    debt_kop: int, *, debt_count: int = 1, manual_kop: int = 0, postpaid: int = 0
+) -> CalcDebtResponse:
+    return CalcDebtResponse(
+        debt_kop=debt_kop,
+        debt_count=debt_count,
+        manual_kop=manual_kop,
+        postpaid_kop=postpaid,
+        postpaid_count=1 if postpaid else 0,
     )
-    text = format_debt_text(debt, balance)
-    assert "💰 Заказчик должен: 2 599,00 BYN (предоплата, 1 шт)" in text
+
+
+def _balance(
+    debt_kop: int,
+    *,
+    debt_count: int = 1,
+    manual_kop: int = 0,
+    repaid_kop: int = 0,
+    repaid_count: int = 0,
+) -> CalcBalanceResponse:
+    total = debt_kop + manual_kop
+    balance = total - repaid_kop
+    return CalcBalanceResponse(
+        debt_kop=debt_kop,
+        debt_count=debt_count,
+        manual_kop=manual_kop,
+        total_kop=total,
+        repaid_kop=repaid_kop,
+        repaid_count=repaid_count,
+        balance_kop=balance,
+        advance_kop=max(0, -balance),
+    )
+
+
+def test_debt_text_with_repayments() -> None:
+    debt = _debt(259900)
+    balance = _balance(259900, repaid_kop=100000, repaid_count=1)
+    text = format_debt_text(debt, balance, for_executor=True)
+    assert "💰 Долг по товарам: 2 599,00 BYN (предоплата, 1 шт)" in text
+    assert "📜 Долги за прошлое: 0,00 BYN" in text
+    assert "🧾 Итого долг: 2 599,00 BYN" in text
     assert "💸 Погашено: 1 000,00 BYN (1 шт)" in text
     assert "✅ Остаток: 1 599,00 BYN" in text
     assert "Аванс" not in text
 
 
+def test_debt_text_adds_manual_debt() -> None:
+    debt = _debt(100000, manual_kop=50000)
+    balance = _balance(100000, manual_kop=50000)
+    text = format_debt_text(debt, balance, for_executor=True)
+    assert "📜 Долги за прошлое: 500,00 BYN" in text
+    assert "🧾 Итого долг: 1 500,00 BYN" in text
+    assert "✅ Остаток: 1 500,00 BYN" in text
+
+
+def test_debt_text_negative_manual_debt() -> None:
+    debt = _debt(100000, manual_kop=-30000)
+    balance = _balance(100000, manual_kop=-30000)
+    text = format_debt_text(debt, balance, for_executor=True)
+    assert "📜 Долги за прошлое: -300,00 BYN" in text
+    assert "🧾 Итого долг: 700,00 BYN" in text
+
+
+def test_debt_text_customer_sees_total_only() -> None:
+    debt = _debt(100000, manual_kop=50000)
+    balance = _balance(100000, manual_kop=50000, repaid_kop=20000, repaid_count=1)
+    text = format_debt_text(debt, balance, for_executor=False)
+    assert "💰 Долг: 1 500,00 BYN" in text
+    assert "Долг по товарам" not in text
+    assert "Долги за прошлое" not in text
+    assert "✅ Остаток: 1 300,00 BYN" in text
+
+
 def test_debt_text_overpayment_shows_advance() -> None:
-    debt = CalcDebtResponse(debt_kop=100000, debt_count=1, postpaid_kop=0, postpaid_count=0)
-    balance = CalcBalanceResponse(
-        debt_kop=100000,
-        debt_count=1,
-        repaid_kop=150000,
-        repaid_count=1,
-        balance_kop=-50000,
-        advance_kop=50000,
-    )
-    text = format_debt_text(debt, balance)
+    debt = _debt(100000)
+    balance = _balance(100000, repaid_kop=150000, repaid_count=1)
+    text = format_debt_text(debt, balance, for_executor=True)
     assert "✅ Остаток: 0,00 BYN" in text
     assert "🎁 Аванс: 500,00 BYN" in text
     assert "-500" not in text
 
 
 def test_debt_text_keeps_postpaid_line() -> None:
-    debt = CalcDebtResponse(debt_kop=0, debt_count=0, postpaid_kop=70000, postpaid_count=1)
-    balance = CalcBalanceResponse(
-        debt_kop=0, debt_count=0, repaid_kop=0, repaid_count=0, balance_kop=0, advance_kop=0
-    )
-    text = format_debt_text(debt, balance)
+    debt = _debt(0, debt_count=0, postpaid=70000)
+    balance = _balance(0, debt_count=0)
+    text = format_debt_text(debt, balance, for_executor=True)
     assert "⏳ Ждет постоплаты: 700,00 BYN (1 шт)" in text
     assert "Остаток" not in text
 

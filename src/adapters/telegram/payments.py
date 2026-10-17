@@ -7,12 +7,14 @@ from collections.abc import Mapping
 from typing import Any
 
 from aiogram.enums import ParseMode
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from src.adapters.telegram.keyboards import debt_menu_keyboard
 from src.domain.entities import Repayment
+from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
 from src.domain.value_objects import Money
-from src.use_cases.calc_balance import CalcBalanceResponse
-from src.use_cases.calc_debt import CalcDebtResponse
+from src.use_cases.calc_balance import CalcBalanceResponse, CalcBalanceUseCase
+from src.use_cases.calc_debt import CalcDebtResponse, CalcDebtUseCase
 from src.use_cases.list_repayments import ListRepaymentsResponse
 
 
@@ -20,20 +22,56 @@ def _money(kop: int) -> str:
     return Money(kop).format_rub()
 
 
-def format_debt_text(debt: CalcDebtResponse, balance: CalcBalanceResponse) -> str:
-    """Debt summary: owed, repaid, remaining balance (or advance), postpaid."""
-    owed = _money(balance.debt_kop)
-    lines = [f"💰 Заказчик должен: {owed} (предоплата, {balance.debt_count} шт)"]
+def _signed_money(kop: int) -> str:
+    """Like `_money` but permits negative balances (past-debt overpayment)."""
+    return f"-{Money(-kop).format_rub()}" if kop < 0 else Money(kop).format_rub()
+
+
+def format_debt_text(
+    debt: CalcDebtResponse, balance: CalcBalanceResponse, *, for_executor: bool
+) -> str:
+    """Debt summary: owed, repaid, remaining balance (or advance), postpaid.
+
+    The executor also sees the breakdown between items and past-orders debt;
+    the customer only sees the total.
+    """
+    lines = []
+    if for_executor:
+        lines.append(
+            f"💰 Долг по товарам: {_money(balance.debt_kop)} "
+            f"(предоплата, {balance.debt_count} шт)"
+        )
+        lines.append(f"📜 Долги за прошлое: {_signed_money(balance.manual_kop)}")
+        lines.append(f"🧾 Итого долг: {_signed_money(balance.total_kop)}")
+    else:
+        lines.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
     if balance.repaid_count:
         lines.append(f"💸 Погашено: {_money(balance.repaid_kop)} ({balance.repaid_count} шт)")
     if balance.advance_kop:
         lines.append("✅ Остаток: 0,00 BYN")
         lines.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
-    elif balance.debt_count or balance.repaid_count:
-        lines.append(f"✅ Остаток: {_money(balance.balance_kop)}")
+    elif balance.total_kop or balance.repaid_count:
+        lines.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
     if debt.postpaid_count:
         lines.append(f"⏳ Ждет постоплаты: {_money(debt.postpaid_kop)} ({debt.postpaid_count} шт)")
     return "\n".join(lines)
+
+
+async def send_debt(
+    message: Message,
+    item_repo: IItemRepository,
+    repayment_repo: IRepaymentRepository,
+    manual_repo: IManualDebtRepository,
+    *,
+    for_executor: bool,
+) -> None:
+    """Render the debt summary + the debt submenu keyboard."""
+    debt = await CalcDebtUseCase(item_repo, manual_repo).execute()
+    balance = await CalcBalanceUseCase(item_repo, repayment_repo, manual_repo).execute()
+    await message.answer(
+        format_debt_text(debt, balance, for_executor=for_executor),
+        reply_markup=debt_menu_keyboard(for_executor=for_executor),
+    )
 
 
 def _repayment_line(index: int, repayment: Repayment, who: str) -> str:

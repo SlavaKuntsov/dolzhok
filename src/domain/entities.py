@@ -96,6 +96,19 @@ NOTE_MAX_LEN = 256
 
 
 @dataclass
+class ManualDebt:
+    """Running lump-sum debt from past orders, not tied to any item.
+
+    Signed: a negative value means the customer overpaid on past debt, so the
+    debt only shrinks when the executor explicitly subtracts an amount.
+    """
+
+    amount_kop: int = 0
+    id: int | None = None
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
 class Repayment:
     """One cash transfer from customer to executor that shrinks the running balance."""
 

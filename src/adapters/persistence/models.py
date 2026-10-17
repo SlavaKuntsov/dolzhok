@@ -27,6 +27,14 @@ class ItemModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class ManualDebtModel(Base):
+    __tablename__ = "manual_debts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    amount_kop: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class RepaymentModel(Base):
     __tablename__ = "repayments"
 

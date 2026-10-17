@@ -18,7 +18,7 @@ from src.adapters.telegram.keyboards import (
 from src.adapters.telegram.payments import payments_message, repayment_confirm_message
 from src.domain.entities import Repayment
 from src.domain.errors import DomainError
-from src.domain.interfaces import IItemRepository, IRepaymentRepository
+from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
 from src.domain.value_objects import Money, parse_price_to_kop
 from src.infrastructure.config import Settings
 from src.use_cases.add_repayment import AddRepaymentRequest, AddRepaymentUseCase
@@ -73,6 +73,7 @@ def build_repayments_router(settings: Settings) -> Router:
         state: FSMContext,
         item_repo: IItemRepository,
         repayment_repo: IRepaymentRepository,
+        manual_repo: IManualDebtRepository,
         *,
         amount_kop: int,
         note: str | None,
@@ -81,7 +82,7 @@ def build_repayments_router(settings: Settings) -> Router:
         saved = await AddRepaymentUseCase(repayment_repo).execute(
             AddRepaymentRequest(amount_kop=amount_kop, created_by=executor_id, note=note)
         )
-        balance = await CalcBalanceUseCase(item_repo, repayment_repo).execute()
+        balance = await CalcBalanceUseCase(item_repo, repayment_repo, manual_repo).execute()
         amount = Money(saved.repayment.amount_kop).format_rub()
         tail = _balance_tail(balance.balance_kop, balance.advance_kop)
         return f"✅ Записал погашение {amount}.\n{tail}"
@@ -156,11 +157,17 @@ def build_repayments_router(settings: Settings) -> Router:
         state: FSMContext,
         item_repo: IItemRepository,
         repayment_repo: IRepaymentRepository,
+        manual_debt_repo: IManualDebtRepository,
     ) -> None:
         assert message.text is not None
         data = await state.get_data()
         reply = await save(
-            state, item_repo, repayment_repo, amount_kop=int(data["amount_kop"]), note=message.text
+            state,
+            item_repo,
+            repayment_repo,
+            manual_debt_repo,
+            amount_kop=int(data["amount_kop"]),
+            note=message.text,
         )
         await message.answer(reply, reply_markup=debt_menu_keyboard(for_executor=True))
 
@@ -170,13 +177,19 @@ def build_repayments_router(settings: Settings) -> Router:
         state: FSMContext,
         item_repo: IItemRepository,
         repayment_repo: IRepaymentRepository,
+        manual_debt_repo: IManualDebtRepository,
     ) -> None:
         data = await state.get_data()
         if "amount_kop" not in data:
             await callback.answer("Начни заново: /pay", show_alert=True)
             return
         reply = await save(
-            state, item_repo, repayment_repo, amount_kop=int(data["amount_kop"]), note=None
+            state,
+            item_repo,
+            repayment_repo,
+            manual_debt_repo,
+            amount_kop=int(data["amount_kop"]),
+            note=None,
         )
         if isinstance(callback.message, Message):
             await callback.message.answer(reply, reply_markup=debt_menu_keyboard(for_executor=True))

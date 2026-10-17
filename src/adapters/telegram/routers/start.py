@@ -16,17 +16,14 @@ from src.adapters.telegram.keyboards import (
     BTN_DEBTS,
     BTN_LIST,
     BTN_STATS,
-    debt_menu_keyboard,
     main_menu_keyboard,
 )
 from src.adapters.telegram.lists import list_page_message
-from src.adapters.telegram.payments import format_debt_text
+from src.adapters.telegram.payments import send_debt
 from src.domain.entities import ItemStatus
-from src.domain.interfaces import IItemRepository, IRepaymentRepository
+from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
 from src.domain.value_objects import Money
 from src.infrastructure.config import Settings
-from src.use_cases.calc_balance import CalcBalanceUseCase
-from src.use_cases.calc_debt import CalcDebtUseCase
 from src.use_cases.calc_stats import CalcStatsUseCase
 from src.use_cases.list_items import ListItemsRequest, ListItemsUseCase
 
@@ -85,13 +82,12 @@ async def _send_debt(
     message: Message,
     item_repo: IItemRepository,
     repayment_repo: IRepaymentRepository,
+    manual_repo: IManualDebtRepository,
     *,
     for_executor: bool,
 ) -> None:
-    debt = await CalcDebtUseCase(item_repo).execute()
-    balance = await CalcBalanceUseCase(item_repo, repayment_repo).execute()
-    await message.answer(
-        format_debt_text(debt, balance), reply_markup=debt_menu_keyboard(for_executor=for_executor)
+    await send_debt(
+        message, item_repo, repayment_repo, manual_repo, for_executor=for_executor
     )
 
 
@@ -169,6 +165,7 @@ def build_start_router(settings: Settings) -> Router:
         state: FSMContext,
         item_repo: IItemRepository,
         repayment_repo: IRepaymentRepository,
+        manual_debt_repo: IManualDebtRepository,
     ) -> None:
         await state.clear()
         assert message.from_user is not None
@@ -176,6 +173,7 @@ def build_start_router(settings: Settings) -> Router:
             message,
             item_repo,
             repayment_repo,
+            manual_debt_repo,
             for_executor=message.from_user.id == executor_id,
         )
 
@@ -190,6 +188,7 @@ def build_start_router(settings: Settings) -> Router:
         state: FSMContext,
         item_repo: IItemRepository,
         repayment_repo: IRepaymentRepository,
+        manual_debt_repo: IManualDebtRepository,
     ) -> None:
         await state.clear()
         assert message.from_user is not None
@@ -197,6 +196,7 @@ def build_start_router(settings: Settings) -> Router:
             message,
             item_repo,
             repayment_repo,
+            manual_debt_repo,
             for_executor=message.from_user.id == executor_id,
         )
 
@@ -206,6 +206,7 @@ def build_start_router(settings: Settings) -> Router:
         state: FSMContext,
         item_repo: IItemRepository,
         repayment_repo: IRepaymentRepository,
+        manual_debt_repo: IManualDebtRepository,
     ) -> None:
         await state.clear()
         assert message.from_user is not None
@@ -213,6 +214,7 @@ def build_start_router(settings: Settings) -> Router:
             message,
             item_repo,
             repayment_repo,
+            manual_debt_repo,
             for_executor=message.from_user.id == executor_id,
         )
 

@@ -6,9 +6,10 @@ from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from src.adapters.persistence.manual_debt_repo import SqlAlchemyManualDebtRepository
 from src.adapters.persistence.models import Base
 from src.adapters.persistence.sqlalchemy_repo import SqlAlchemyItemRepository
-from src.domain.entities import Item, ItemStatus
+from src.domain.entities import Item, ItemStatus, ManualDebt
 
 
 async def _make_repo(tmp_path: Path) -> SqlAlchemyItemRepository:
@@ -39,3 +40,20 @@ async def test_sqlite_roundtrip(tmp_path: Path) -> None:
     recent = await repo.list_recent(limit=10)
     assert len(recent) == 1
     assert len(await repo.list_all()) == 1
+
+
+async def test_manual_debt_single_row_roundtrip(tmp_path: Path) -> None:
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path}/m.db")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    repo = SqlAlchemyManualDebtRepository(factory)
+
+    assert (await repo.get()).amount_kop == 0
+    saved = await repo.save(ManualDebt(amount_kop=50000))
+    assert saved.id is not None
+    assert (await repo.get()).amount_kop == 50000
+
+    # A fresh entity without id must update the single existing row, not add one.
+    await repo.save(ManualDebt(amount_kop=-1500))
+    assert (await repo.get()).amount_kop == -1500

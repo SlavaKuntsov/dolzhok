@@ -12,7 +12,11 @@ from src.use_cases.add_repayment import AddRepaymentRequest, AddRepaymentUseCase
 from src.use_cases.calc_balance import CalcBalanceUseCase
 from src.use_cases.delete_repayment import DeleteRepaymentRequest, DeleteRepaymentUseCase
 from src.use_cases.list_repayments import ListRepaymentsUseCase
-from tests.unit.fakes import InMemoryItemRepository, InMemoryRepaymentRepository
+from tests.unit.fakes import (
+    InMemoryItemRepository,
+    InMemoryManualDebtRepository,
+    InMemoryRepaymentRepository,
+)
 
 _counter = itertools.count()
 
@@ -101,7 +105,7 @@ async def test_delete_repayment_restores_balance() -> None:
     repayments = InMemoryRepaymentRepository()
     await _add_item(items, price=259900)
     await _pay(repayments, 100000)
-    before = await CalcBalanceUseCase(items, repayments).execute()
+    before = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     listed = await ListRepaymentsUseCase(repayments).execute()
     repayment_id = listed.repayments[0].id
     assert repayment_id is not None
@@ -110,7 +114,7 @@ async def test_delete_repayment_restores_balance() -> None:
         DeleteRepaymentRequest(repayment_id=repayment_id)
     )
 
-    after = await CalcBalanceUseCase(items, repayments).execute()
+    after = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert before.balance_kop == 159900
     assert after.balance_kop == 259900
 
@@ -120,7 +124,7 @@ async def test_balance_partial_payment() -> None:
     repayments = InMemoryRepaymentRepository()
     await _add_item(items, price=259900)
     await _pay(repayments, 100000)
-    balance = await CalcBalanceUseCase(items, repayments).execute()
+    balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert balance.debt_kop == 259900
     assert balance.repaid_kop == 100000
     assert balance.balance_kop == 159900
@@ -132,7 +136,7 @@ async def test_balance_full_payment_is_zero() -> None:
     repayments = InMemoryRepaymentRepository()
     await _add_item(items, price=259900)
     await _pay(repayments, 259900)
-    balance = await CalcBalanceUseCase(items, repayments).execute()
+    balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert balance.balance_kop == 0
     assert balance.advance_kop == 0
 
@@ -142,7 +146,7 @@ async def test_balance_overpayment_is_advance() -> None:
     repayments = InMemoryRepaymentRepository()
     await _add_item(items, price=100000)
     await _pay(repayments, 150000)
-    balance = await CalcBalanceUseCase(items, repayments).execute()
+    balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert balance.balance_kop == -50000
     assert balance.advance_kop == 50000
 
@@ -153,7 +157,7 @@ async def test_balance_counts_and_qty() -> None:
     await _add_item(items, price=129950, qty=2)
     await _pay(repayments, 100000)
     await _pay(repayments, 50000)
-    balance = await CalcBalanceUseCase(items, repayments).execute()
+    balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert balance.debt_kop == 259900
     assert balance.debt_count == 1
     assert balance.repaid_count == 2
@@ -164,7 +168,7 @@ async def test_balance_skips_items_without_price() -> None:
     repayments = InMemoryRepaymentRepository()
     await _add_item(items, price=None)
     await _pay(repayments, 100000)
-    balance = await CalcBalanceUseCase(items, repayments).execute()
+    balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert balance.debt_kop == 0
     assert balance.balance_kop == -100000
     assert balance.advance_kop == 100000
