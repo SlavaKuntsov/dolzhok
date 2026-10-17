@@ -38,8 +38,7 @@ def format_debt_text(
     lines = []
     if for_executor:
         lines.append(
-            f"💰 Долг по товарам: {_money(balance.debt_kop)} "
-            f"(предоплата, {balance.debt_count} шт)"
+            f"💰 Долг по товарам: {_money(balance.debt_kop)} (предоплата, {balance.debt_count} шт)"
         )
         lines.append(f"📜 Долги за прошлое: {_signed_money(balance.manual_kop)}")
         lines.append(f"🧾 Итого долг: {_signed_money(balance.total_kop)}")

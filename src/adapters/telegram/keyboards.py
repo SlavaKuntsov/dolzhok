@@ -184,9 +184,7 @@ def debt_menu_keyboard(*, for_executor: bool) -> ReplyKeyboardMarkup:
     rows = [[KeyboardButton(text=BTN_DEBT), KeyboardButton(text=BTN_PAYMENTS)]]
     if for_executor:
         rows.append([KeyboardButton(text=BTN_MANUAL_ADD), KeyboardButton(text=BTN_PAY)])
-        rows.append(
-            [KeyboardButton(text=BTN_MANUAL_EDIT), KeyboardButton(text=BTN_MANUAL_RESET)]
-        )
+        rows.append([KeyboardButton(text=BTN_MANUAL_EDIT), KeyboardButton(text=BTN_MANUAL_RESET)])
         rows.append([KeyboardButton(text=BTN_BACK)])
     else:
         rows.append([KeyboardButton(text=BTN_BACK)])

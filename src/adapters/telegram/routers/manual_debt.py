@@ -45,9 +45,7 @@ def build_manual_debt_router(settings: Settings) -> Router:
         repayment_repo: IRepaymentRepository,
         manual_repo: IManualDebtRepository,
     ) -> None:
-        await send_debt(
-            message, item_repo, repayment_repo, manual_repo, for_executor=True
-        )
+        await send_debt(message, item_repo, repayment_repo, manual_repo, for_executor=True)
 
     async def _save(
         message: Message,
