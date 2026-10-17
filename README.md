@@ -115,6 +115,9 @@ make deploy
   (только `PRAGMA journal_mode=WAL` для SQLite); если миграции не прогнаны,
   старт падает с подсказкой `make migrate`. Иначе таблицы появились бы без
   `alembic_version` и первый `upgrade head` упал бы на `CREATE TABLE`.
+- **Соединения на serverless.** Для Postgres клиентский пул отключён
+  (`NullPool`): пулинг делает Neon-пулер. Иначе замороженный инстанс Vercel
+  отдаёт соединение, которое Neon уже закрыл (`InterfaceError: connection is closed`).
 - **Дрейф диалектов.** `tests/integration/test_postgres_repo.py` гоняет миграции
   и repo-раундтрип на Postgres (опционально):
   `TEST_DATABASE_URL='postgresql+asyncpg://…' uv run pytest tests/integration`.

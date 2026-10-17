@@ -12,10 +12,17 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 
 def create_engine(database_url: str) -> AsyncEngine:
-    return create_async_engine(normalize_database_url(database_url), future=True)
+    url = normalize_database_url(database_url)
+    if url.get_backend_name() == "postgresql":
+        # Serverless: Neon's pooler (PgBouncer) already multiplexes connections.
+        # Keeping a client-side pool across frozen invocations hands out sockets
+        # Neon closed while the instance was idle -> "connection is closed".
+        return create_async_engine(url, future=True, poolclass=NullPool)
+    return create_async_engine(url, future=True)
 
 
 def normalize_database_url(database_url: str) -> URL:

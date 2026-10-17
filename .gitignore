@@ -16,3 +16,5 @@ backup-*.sql
 
 # CodeGraph local index (tooling artifact)
 .codegraph/
+.vercel
+.env*
