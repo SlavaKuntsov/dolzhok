@@ -105,7 +105,14 @@ make deploy
 | Снять webhook (вернуться к polling) | `make webhook-delete` |
 | Регистрация webhook | `make webhook-set` |
 | Миграции Neon | `make migrate` (читает `DATABASE_URL` из `.env`) |
+| Логи прод-функции | `make logs-vercel` (последние 30 мин) |
+| Проверки (lint + types + tests) | `make check` |
+| Drift SQLite↔Postgres | `make test-pg` |
+| Sequence в `0003` (destructive) | `make test-pg-reset` |
 
+- **Логи.** `make logs-vercel` печатает runtime-логи прода за последние 30 минут
+  и выходит (не стримит) — смотри сразу после воспроизведения. Vercel Hobby по
+  документации хранит их 1 час, но CLI на Hobby отвечает ошибкой на `--since 1h`.
 - **Почему webhook.** Telegram сам повторяет недоставленные апдейты с backoff и
   будит функцию на каждый запрос — не нужен always-on воркер (ADR-0001).
 - **Апдейты вне функции.** `WEBHOOK_SECRET` проверяется по заголовку

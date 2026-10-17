@@ -1,4 +1,4 @@
-.PHONY: sync lint typecheck test test-pg test-pg-reset check migrate revision run deploy vercel-deploy webhook-set webhook-delete webhook-info fly-init deploy-fly logs backup restore restart clean
+.PHONY: sync lint typecheck test test-pg test-pg-reset check migrate revision run deploy vercel-deploy webhook-set webhook-delete webhook-info logs-vercel fly-init deploy-fly logs backup restore restart clean
 
 # Install/sync dependencies from lockfile
 sync:
@@ -65,6 +65,11 @@ webhook-delete:
 # Show the current webhook registration.
 webhook-info:
 	uv run python -m src.adapters.webhook.manage info
+
+# Print recent production runtime logs (one-shot, default window: last 30m).
+# Run it right after reproducing an issue: on Hobby `--since 1h` is rejected.
+logs-vercel:
+	vercel logs --environment production --since 30m
 
 # --- Fly.io path: REJECTED (ADR-0001). Kept as an optional non-prod fallback. ---
 
