@@ -2,6 +2,11 @@
 
 SQLite cannot drop constraints in place, so the table is rebuilt
 preserving all rows. Downgrade back to unique fails if duplicates exist.
+
+Postgres: the same rebuild runs verbatim. The `INSERT ... SELECT` copies the
+`id` column without advancing the new table's sequence, so this is only safe
+on an empty database (the Neon prod case) — a populated Postgres DB would need
+`setval` on the sequence afterwards.
 """
 
 from __future__ import annotations
@@ -37,6 +42,9 @@ def upgrade() -> None:
         "SELECT id, url, sku, title, price_kop, qty, status, payment, created_by, created_at "
         "FROM items"
     )
+    # NOTE(prod): the copy does not advance items_new_id_seq. Neon prod is empty
+    # here (no rows copied); a populated Postgres DB would need
+    # `SELECT setval(pg_get_serial_sequence('items', 'id'), max(id))` first.
     op.drop_table("items")
     op.rename_table("items_new", "items")
     op.create_index("ix_items_status", "items", ["status"])

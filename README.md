@@ -7,7 +7,7 @@
 - Кнопки меню: `📋 Список`, `💰 Долги`, `📊 Статистика`, `❌ Отмена` (+ команды `/menu`, `/cancel`). `💰 Долги` сразу показывает сводку долга и подменю действий: `💰 Долг`, `📜 Погашения` и (у исполнителя) `💸 Погасить`, `⬅️ Назад`.
 - Погашения: исполнитель вносит `💸 Погасить` (сумма + опц. комментарий), долг уменьшается, лента — в `📜 Погашения` (удаление ошибочной записи с подтверждением).
 
-Бот 24/7 на Fly.io free, БД — SQLite файл (с портом под Turso). MacBook — только разработка.
+Бот 24/7 на Vercel (webhook, FastAPI ASGI) + Neon Postgres. Локально — long polling и SQLite файл. MacBook — только разработка.
 
 ## Quickstart (локально)
 
@@ -51,57 +51,78 @@ uv run python -m src.main
 src/domain/         # entities, value objects, IItemRepository/IRepaymentRepository (pure)
 src/use_cases/      # add_item, set_price, set_payment, change_status, calc_debt, calc_stats, add/list/delete_repayment, calc_balance
 src/adapters/telegram/     # routers, keyboards, fsm
-src/adapters/persistence/  # sqlalchemy models + SqliteItem/RepaymentRepository
-src/infrastructure/ # config, db, logging
+src/adapters/persistence/  # sqlalchemy models + SqlAlchemyItem/RepaymentRepository (SQLite + Postgres)
+src/adapters/webhook/      # FastAPI ASGI app (Vercel) + set/delete webhook CLI
+src/infrastructure/ # config, db, bootstrap (shared wiring), logging
+asgi.py             # Vercel entrypoint -> src.adapters.webhook.app:app
 docs/adr/           # ADR: зафиксированные решения
 docs/agents/        # настройка скиллов (issue-tracker, triage-labels, domain)
 ```
 
 Язык — `GLOSSARY.md`; решения — `docs/adr/`; спеки и тикеты — GitHub Issues; стиль — `AGENTS.md`.
 
-## Deploy (Fly.io free, ~$0)
+## Deploy (Vercel serverless + Neon Postgres, ~$0)
 
-Один always-on воркер, SQLite на volume `/data`. HTTP-порта нет (long polling).
+Прод — Telegram **webhook** (FastAPI ASGI-функция на Vercel Hobby) + **Neon
+Postgres** (`asyncpg`). Локально — long polling и SQLite. Решение и отклонённый
+Fly.io — `docs/adr/0001-vercel-neon-webhook-over-fly.md`.
 
-### Первичная настройка
+`vercel.json` + `asgi.py` (`[tool.vercel] entrypoint` в `pyproject.toml`)
+задают ASGI-энтрипоинт; зависимости Vercel ставит из `pyproject.toml`/`uv.lock`.
+
+### Первичная настройка (руками, один раз)
+
+1. **Neon**: создать проект/базу, скопировать connection string. Вставь драйвер:
+   `DATABASE_URL=postgresql+asyncpg://user:pass@ep-….neon.tech/db?sslmode=require`
+   (`sslmode`/`channel_binding` из строки Neon нормализуются под asyncpg в коде).
+2. **Миграции на Neon** (с локальной машины):
+   `DATABASE_URL='postgresql+asyncpg://…' make migrate`
+3. **Vercel**: импортировать репозиторий, задать env (Production):
+   `BOT_TOKEN`, `CUSTOMER_ID`, `EXECUTOR_ID`, `DATABASE_URL`,
+   `WEBHOOK_BASE_URL=https://<app>.vercel.app`, `WEBHOOK_SECRET=<random string>`.
+4. **Deploy + webhook**: `make deploy` — это `vercel deploy --prod` + `make webhook-set`
+   (`setWebhook` с секретом). Только код, без вебхука: `make vercel-deploy`.
+5. **Smoke**: написать боту `/start` — должен ответить.
+
+### Обновление
 
 ```bash
-make fly-init        # fly launch --no-deploy + volume data 1GB (ams)
-fly secrets set BOT_TOKEN=... CUSTOMER_ID=... EXECUTOR_ID=...
-make deploy          # fly deploy
-make logs            # проверить, что миграции применились и бот опросил Telegram
+DATABASE_URL='postgresql+asyncpg://…' make migrate   # если менялась схема
+make deploy
 ```
-
-- `fly launch --no-deploy` берёт готовые `Dockerfile` + `fly.toml` (регион `ams`,
-  volume `data` → `/data`, `DATABASE_URL=sqlite+aiosqlite:////data/bot.db`).
-- Секреты (`BOT_TOKEN`, `CUSTOMER_ID`, `EXECUTOR_ID`) — только через `fly secrets set`,
-  в образ не попадают (`.dockerignore` исключает `.env`).
-- На каждом старте контейнер выполняет `alembic upgrade head` против
-  `DATABASE_URL` (`docker-entrypoint.sh`), затем `python -m src.main`.
 
 ### Runbook
 
 | Задача | Команда |
 |---|---|
-| Логи в реальном времени | `make logs` (`fly logs`) |
-| Статус машины | `fly status` |
-| SSH на машину | `fly ssh console` |
-| Бэкап БД (dated dump) | `make backup` → `backup-YYYY-MM-DD.sql` |
-| Восстановление | `make restore FILE=backup-YYYY-MM-DD.sql` |
-| Ручной рестарт | `make restart` (`fly machines restart`) |
-| Обновление кода | `make deploy` (тот же volume, БД на месте) |
+| Deploy + webhook | `make deploy` |
+| Только deploy кода | `make vercel-deploy` |
+| Статус webhook | `make webhook-info` |
+| Снять webhook (вернуться к polling) | `make webhook-delete` |
+| Регистрация webhook | `make webhook-set` |
+| Миграции Neon | `DATABASE_URL='postgresql+asyncpg://…' make migrate` |
 
-- **Догон после рестарта.** `long polling` + `drop_pending_updates=False`:
-  Telegram хранит неподтверждённые апдейты < 24ч, бот забирает их после
-  пробуждения. Пропуски > 24ч теряются по дизайну Telegram API.
-- **Миграции.** Схема применяется автоматически на старте. Если volume заведён
-  до P4 (таблицы созданы через `create_all`, без `alembic_version`) — один раз
-  проставь версию: `fly ssh console -C "uv run alembic stamp head"`.
-- **Восстановление.** `make restore` сначала удаляет текущий `/data/bot.db*`
-  (`.dump` не содержит `DROP TABLE`), заливает бэкап в пустую БД и перезапускает
-  машину. Делай это в простое: до перезапуска бот пишет в старый (удалённый) файл.
-- **Бэкап перед деплоем** со сменой схемы: `make backup`, затем `make deploy`.
-- Alembic читает `DATABASE_URL` из окружения; локально он совпадает с `.env` по
-  умолчанию, но если меняешь путь в `.env` — экспортируй его и для `make migrate`.
+- **Почему webhook.** Telegram сам повторяет недоставленные апдейты с backoff и
+  будит функцию на каждый запрос — не нужен always-on воркер (ADR-0001).
+- **Апдейты вне функции.** `WEBHOOK_SECRET` проверяется по заголовку
+  `X-Telegram-Bot-Api-Secret-Token`; чужие запросы получают `403`. Без секрета
+  endpoint открыт — в проде секрет обязателен (app пишет warning при старте).
+- **Схема на Postgres — только Alembic.** `init_db` создаёт таблицы лишь для
+  SQLite; на Postgres `create_all` намеренно не вызывается, иначе таблицы
+  появятся без `alembic_version` и первый `upgrade head` упадёт.
+- **Дрейф диалектов.** `tests/integration/test_postgres_repo.py` гоняет миграции
+  и repo-раундтрип на Postgres (опционально):
+  `TEST_DATABASE_URL='postgresql+asyncpg://…' uv run pytest tests/integration`.
+- **Известное ограничение (FSM).** Диспатчер использует `MemoryStorage`: на
+  serverless состояние FSM живёт в конкретном инстансе и теряется при cold start,
+  поэтому многошаговые флоу (`/pay`) могут сброситься между апдейтами. Нужен
+  персистентный storage (follow-up тикет); пока — риск митигируется тёплым
+  инстансом.
 
-Замена SQLite → Turso: реализовать `IItemRepository` на `libsql`, остальное не трогать.
+### Fly.io — отклонён
+
+Fly.io больше не прод-путь (платный always-on, OOM на 256 МБ — ADR-0001).
+`Dockerfile`, `fly.toml` и `make *-fly`/`fly-*` оставлены как опциональный
+не-прод фолбэк; `make fly-init`/`make deploy-fly` — только если очень нужно.
+Удаление старого приложения: `fly apps destroy dolzhok`.
+

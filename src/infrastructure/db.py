@@ -1,11 +1,11 @@
-"""Async engine / session factory / schema init for SQLite."""
+"""Async engine / session factory / schema init (SQLite + Postgres)."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from sqlalchemy import text
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -17,7 +17,25 @@ from src.adapters.persistence.models import Base
 
 
 def create_engine(database_url: str) -> AsyncEngine:
-    return create_async_engine(database_url, future=True)
+    return create_async_engine(_normalize_url(database_url), future=True)
+
+
+def _normalize_url(database_url: str) -> URL:
+    """Adapt libpq-style query params (Neon) to what asyncpg accepts.
+
+    Neon hands out URLs like ``...?sslmode=require&channel_binding=require``.
+    asyncpg has no ``sslmode``/``channel_binding`` knobs: it takes ``ssl`` (the
+    sslmode string) and rejects unknown params. Translate, dropping the rest.
+    """
+    url = make_url(database_url)
+    if url.get_backend_name() != "postgresql" or url.get_driver_name() != "asyncpg":
+        return url
+    query = dict(url.query)
+    sslmode = query.pop("sslmode", None)
+    query.pop("channel_binding", None)
+    if sslmode and "ssl" not in query:
+        query["ssl"] = sslmode
+    return url.set(query=query)
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
@@ -25,14 +43,21 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
 
 
 async def init_db(engine: AsyncEngine) -> None:
-    """Create parent dir, tables if missing (fresh volumes), enable WAL mode."""
+    """Prepare the schema for local SQLite runs.
+
+    SQLite (local/tests): create missing tables and enable WAL.
+    Postgres (Neon): schema is owned by Alembic — never ``create_all`` here, or
+    tables would exist without an ``alembic_version`` stamp and the first
+    ``alembic upgrade head`` would fail on ``CREATE TABLE``.
+    """
+    if engine.url.get_backend_name() != "sqlite":
+        return
     db_file = _sqlite_file(str(engine.url))
     if db_file:
         db_file.parent.mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        if engine.url.drivername.startswith("sqlite"):
-            await conn.execute(text("PRAGMA journal_mode=WAL"))
+        await conn.execute(text("PRAGMA journal_mode=WAL"))
 
 
 def _sqlite_file(database_url: str) -> Path | None:

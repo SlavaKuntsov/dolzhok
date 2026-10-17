@@ -15,10 +15,21 @@ class Settings(BaseSettings):
     executor_id: int
     database_url: str = "sqlite+aiosqlite:///./data/bot.db"
     log_level: str = "INFO"
+    # Webhook mode (Vercel). Empty locally -> long polling fallback.
+    webhook_base_url: str | None = None
+    webhook_secret: str | None = None
+    webhook_path: str = "/webhook"
 
     @property
     def allowed_user_ids(self) -> frozenset[int]:
         return frozenset({self.customer_id, self.executor_id})
+
+    @property
+    def webhook_url(self) -> str | None:
+        """Public HTTPS webhook URL, or None when no base URL is configured."""
+        if not self.webhook_base_url:
+            return None
+        return f"{self.webhook_base_url.rstrip('/')}/{self.webhook_path.lstrip('/')}"
 
 
 def get_settings() -> Settings:

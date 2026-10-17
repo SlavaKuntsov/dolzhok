@@ -7,16 +7,13 @@ import logging
 import re
 import sys
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
 from aiogram.exceptions import TelegramNetworkError, TelegramUnauthorizedError
-from aiogram.fsm.storage.memory import MemoryStorage
 from pydantic import ValidationError
 
-from src.adapters.persistence.repayment_repo import SqliteRepaymentRepository
-from src.adapters.persistence.sqlite_repo import SqliteItemRepository
-from src.adapters.telegram.routers import build_root_router
+from src.infrastructure.bootstrap import build_dispatcher
 from src.infrastructure.config import get_settings
-from src.infrastructure.db import create_engine, create_session_factory, init_db
+from src.infrastructure.db import create_engine, init_db
 from src.infrastructure.logging import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -52,13 +49,7 @@ async def amain() -> None:
     engine = create_engine(settings.database_url)
     await init_db(engine)
 
-    repo = SqliteItemRepository(create_session_factory(engine))
-    repayment_repo = SqliteRepaymentRepository(create_session_factory(engine))
-    dispatcher = Dispatcher(storage=MemoryStorage())
-    dispatcher["item_repo"] = repo
-    dispatcher["repayment_repo"] = repayment_repo
-    dispatcher["app_settings"] = settings
-    dispatcher.include_router(build_root_router(settings))
+    dispatcher = build_dispatcher(settings, engine)
 
     try:
         async with Bot(token=settings.bot_token.strip()) as bot:

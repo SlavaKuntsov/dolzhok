@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.adapters.persistence.models import Base
-from src.adapters.persistence.repayment_repo import SqliteRepaymentRepository
+from src.adapters.persistence.repayment_repo import SqlAlchemyRepaymentRepository
 from src.domain.entities import Repayment
 
 
@@ -16,7 +16,7 @@ async def test_repayment_repo_roundtrip(tmp_path: Path) -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    repo = SqliteRepaymentRepository(factory)
+    repo = SqlAlchemyRepaymentRepository(factory)
 
     saved = await repo.add(Repayment(amount_kop=100000, created_by=7, note="за сентябрь"))
     assert saved.id is not None

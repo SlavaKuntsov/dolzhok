@@ -11,8 +11,9 @@
 ## 1. Stack (не менять без обсуждения)
 
 - Python `3.14` (`requires-python >=3.13`), менеджер `uv` only (не pip/poetry).
-- `aiogram >=3,<4`, `sqlalchemy[asyncio]`, `aiosqlite`, `alembic`, `pydantic-settings`.
+- `aiogram >=3,<4`, `sqlalchemy[asyncio]`, `aiosqlite` (local), `asyncpg` (prod), `fastapi` (webhook ASGI), `alembic`, `pydantic-settings`.
 - Линт: `ruff`, типы: `mypy --strict` на `src/`, тесты: `pytest + pytest-asyncio (asyncio_mode=auto)`.
+- Деплой: прод — Vercel webhook (`asgi.py` → `src.adapters.webhook.app:app`) + Neon Postgres; локально — long polling + SQLite (ADR-0001).
 
 ## 2. Команды (единственный способ запуска)
 
@@ -34,7 +35,7 @@ adapters/       # telegram (routers/keyboards/fsm), persistence (models/repo)
 infrastructure/ # config, engine/session, logging
 ```
 
-- Граница через порт `IItemRepository` (async). Сейчас `SqliteItemRepository`, позже Turso — use-case'ы не меняются.
+- Граница через порт `IItemRepository` (async). Сейчас `SqlAlchemyItemRepository`, позже Turso — use-case'ы не меняются.
 - Маппинг ORM ↔ entity только в `adapters/persistence/*_repo.py` (`_to_entity/_to_model`).
 - Деньги: `int` копейки + `Money` VO, валидация в `__post_init__`, отрицательные запрещены.
 - Статусы: любой → любой (кроме того же), свободной выбор кнопками. Повторные ссылки = отдельные товары (дедупа нет).
@@ -55,7 +56,7 @@ infrastructure/ # config, engine/session, logging
 
 - Whitelist `ALLOWED_USER_IDS={CUSTOMER_ID,EXECUTOR_ID}` в `infrastructure/config.py`. Чужие — игнор + `log.warning`, без ответа (анти-спам).
 - Проверка роли в filter, не в теле хендлера. Кнопки статусов — `F.from_user.id == EXECUTOR_ID`.
-- Long polling, `offset = last_update_id + 1` после рестарта. Никаких вебхуков на MVP.
+- Локально — long polling (`offset = last_update_id + 1` после рестарта); прод — webhook на Vercel. Регистрация: `python -m src.adapters.webhook.manage set|delete|info` (`make webhook-*`).
 - Ozon-детект: все локали `ozon.(ru|by|kz|com|uz)` + `ozo.ru`; короткие `/t/` и `ozo.ru` храним как есть (без HTTP-резолва); дедупа нет, каждая ссылка = отдельный товар. Текст до ссылки — в `title`.
 
 ## 6. Git
