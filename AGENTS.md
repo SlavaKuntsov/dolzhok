@@ -20,6 +20,7 @@
 ```bash
 uv sync
 uv run ruff check .
+uv run ruff format --check .
 uv run mypy src
 uv run pytest -q
 uv run alembic upgrade head
@@ -72,7 +73,7 @@ infrastructure/ # config, engine/session, logging
 
 - [ ] issue (spec/тикет) отражает работу и закрыт
 - [ ] unit-тест зелен (in-memory)
-- [ ] `ruff check .` + `mypy src` + `pytest -q` зеленые
+- [ ] `ruff check .` + `ruff format --check .` + `mypy src` + `pytest -q` зеленые (`make check` — lint + types + tests)
 - [ ] миграция `alembic` если менялась схема
 - [ ] `GLOSSARY.md` / ADR обновлены если менялся язык или решение
 - [ ] README обновлён если менялся UX/деплой/формула долга

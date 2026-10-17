@@ -6,13 +6,19 @@ from src.domain.entities import Item, ItemStatus
 from src.use_cases.list_items import ListItemsResponse
 
 
-def _item(item_id: int, status: ItemStatus = ItemStatus.NEW, price: int | None = None) -> Item:
+def _item(
+    item_id: int,
+    status: ItemStatus = ItemStatus.NEW,
+    price: int | None = None,
+    title: str | None = None,
+) -> Item:
     return Item(
         id=item_id,
         url=f"https://ozon.ru/product/x-{item_id}",
         created_by=1,
         status=status,
         price_kop=price,
+        title=title,
     )
 
 
@@ -88,3 +94,30 @@ def test_list_page_message_empty_hint() -> None:
     assert "Тут пока пусто." in kwargs["text"]
     # only filter row + nav row, no item rows
     assert len(kwargs["reply_markup"].inline_keyboard) == 2
+
+
+def test_list_page_message_rows_show_titles() -> None:
+    response = _response(
+        status=None,
+        page=0,
+        pages=1,
+        items=[
+            _item(4, price=129950, title="Лента шлифовальная 760 мм, 25 мм P400"),
+            _item(5, status=ItemStatus.ORDERED, title="Дрель аккумуляторная"),
+        ],
+        total=2,
+    )
+    kwargs = list_page_message(response)
+    rows = kwargs["reply_markup"].inline_keyboard[1:3]
+    assert rows[0][0].text == ("#4 · 🆕 · 1 299,50 BYN · Лента шлифовальная 760 мм, 25 мм P400")
+    assert rows[1][0].text == "#5 · 📦 · нет цены · Дрель аккумуляторная"
+    # tapping a row still opens that Item's card
+    assert rows[0][0].callback_data == "view:4"
+    assert rows[1][0].callback_data == "view:5"
+
+
+def test_list_page_message_untitled_item_keeps_short_label() -> None:
+    response = _response(status=None, page=0, pages=1, items=[_item(6)], total=1)
+    kwargs = list_page_message(response)
+    label = kwargs["reply_markup"].inline_keyboard[1][0].text
+    assert label == "#6 · 🆕 · нет цены"

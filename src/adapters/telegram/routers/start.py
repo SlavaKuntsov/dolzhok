@@ -86,9 +86,7 @@ async def _send_debt(
     *,
     for_executor: bool,
 ) -> None:
-    await send_debt(
-        message, item_repo, repayment_repo, manual_repo, for_executor=for_executor
-    )
+    await send_debt(message, item_repo, repayment_repo, manual_repo, for_executor=for_executor)
 
 
 async def _send_stats(message: Message, item_repo: IItemRepository) -> None:
