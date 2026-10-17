@@ -91,7 +91,7 @@ Fly.io — `docs/adr/0001-vercel-neon-webhook-over-fly.md`.
 ### Обновление
 
 ```bash
-DATABASE_URL='postgresql+asyncpg://…' make migrate   # если менялась схема
+make migrate   # если менялась схема (DATABASE_URL из .env)
 make deploy
 ```
 

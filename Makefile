@@ -20,7 +20,8 @@ test:
 # Full local gate: lint + types + tests
 check: lint typecheck test
 
-# Apply DB migrations to head (local SQLite, or Neon when DATABASE_URL is set)
+# Apply DB migrations to head (local SQLite, or Neon when DATABASE_URL is set
+# in the environment or .env)
 migrate:
 	mkdir -p data
 	uv run alembic upgrade head
@@ -34,7 +35,7 @@ run:
 	uv run python -m src.main
 
 # Deploy to Vercel (prod) and (re)register the webhook. Migrations run
-# separately: `DATABASE_URL=… make migrate` (see README "Deploy").
+# separately: `make migrate` (DATABASE_URL from env/.env, see README "Deploy").
 deploy: vercel-deploy webhook-set
 
 # Push the code to Vercel only (no webhook call).
