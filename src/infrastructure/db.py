@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -12,8 +12,6 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-
-from src.adapters.persistence.models import Base
 
 
 def create_engine(database_url: str) -> AsyncEngine:
@@ -49,21 +47,35 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
 
 
 async def init_db(engine: AsyncEngine) -> None:
-    """Prepare the schema for local SQLite runs.
+    """Prepare the database connection for a run.
 
-    SQLite (local/tests): create missing tables and enable WAL.
-    Postgres (Neon): schema is owned by Alembic — never ``create_all`` here, or
-    tables would exist without an ``alembic_version`` stamp and the first
-    ``alembic upgrade head`` would fail on ``CREATE TABLE``.
+    The schema is owned by Alembic on every dialect (``make migrate`` /
+    ``uv run alembic upgrade head``). Never ``create_all`` here: it would create
+    tables without an ``alembic_version`` stamp, and the first
+    ``alembic upgrade head`` would then fail with "table already exists".
+
+    SQLite additionally gets its parent directory and WAL mode. When migrations
+    have not been run yet, fail fast with an actionable message instead of a
+    cryptic "no such table" later.
     """
-    if engine.url.get_backend_name() != "sqlite":
-        return
-    db_file = _sqlite_file(str(engine.url))
-    if db_file:
-        db_file.parent.mkdir(parents=True, exist_ok=True)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(text("PRAGMA journal_mode=WAL"))
+    if engine.url.get_backend_name() == "sqlite":
+        db_file = _sqlite_file(str(engine.url))
+        if db_file:
+            db_file.parent.mkdir(parents=True, exist_ok=True)
+        async with engine.begin() as conn:
+            await conn.execute(text("PRAGMA journal_mode=WAL"))
+    await _ensure_migrated(engine)
+
+
+async def _ensure_migrated(engine: AsyncEngine) -> None:
+    """Raise a clear error when the schema has not been created by Alembic."""
+    async with engine.connect() as conn:
+        has_schema = await conn.run_sync(lambda sync_conn: inspect(sync_conn).has_table("items"))
+    if not has_schema:
+        raise RuntimeError(
+            "Database schema is missing. Run migrations first: `make migrate` "
+            "(or `uv run alembic upgrade head`)."
+        )
 
 
 def _sqlite_file(database_url: str) -> Path | None:

@@ -104,16 +104,17 @@ make deploy
 | Статус webhook | `make webhook-info` |
 | Снять webhook (вернуться к polling) | `make webhook-delete` |
 | Регистрация webhook | `make webhook-set` |
-| Миграции Neon | `DATABASE_URL='postgresql+asyncpg://…' make migrate` |
+| Миграции Neon | `make migrate` (читает `DATABASE_URL` из `.env`) |
 
 - **Почему webhook.** Telegram сам повторяет недоставленные апдейты с backoff и
   будит функцию на каждый запрос — не нужен always-on воркер (ADR-0001).
 - **Апдейты вне функции.** `WEBHOOK_SECRET` проверяется по заголовку
   `X-Telegram-Bot-Api-Secret-Token`; чужие запросы получают `403`. Без секрета
   endpoint открыт — в проде секрет обязателен (app пишет warning при старте).
-- **Схема на Postgres — только Alembic.** `init_db` создаёт таблицы лишь для
-  SQLite; на Postgres `create_all` намеренно не вызывается, иначе таблицы
-  появятся без `alembic_version` и первый `upgrade head` упадёт.
+- **Схема — только Alembic (на обоих диалектах).** `init_db` таблиц не создаёт
+  (только `PRAGMA journal_mode=WAL` для SQLite); если миграции не прогнаны,
+  старт падает с подсказкой `make migrate`. Иначе таблицы появились бы без
+  `alembic_version` и первый `upgrade head` упал бы на `CREATE TABLE`.
 - **Дрейф диалектов.** `tests/integration/test_postgres_repo.py` гоняет миграции
   и repo-раундтрип на Postgres (опционально):
   `TEST_DATABASE_URL='postgresql+asyncpg://…' uv run pytest tests/integration`.
