@@ -26,7 +26,7 @@ Token: `@BotFather` → `/newbot`. User IDs: `@userinfobot`.
 | Command | Who | What |
 |---|---|---|
 | `/start` | anyone in the whitelist | greeting + role |
-| `/list` | both | cards of the last 10 items (with control buttons for the executor) |
+| `/list` | both | filterable, paged row list of Items; tap a row for its card (executor gets control buttons) |
 | `/debt` | both | «Customer owes: X BYN» + «Repaid»/«Balance» (and «Advance» on overpayment) + pending postpaid |
 | `/stats` | both | ordered/received/cancelled/refunds |
 | `/pay` | executor | record a repayment (FSM: amount → optional comment) |
