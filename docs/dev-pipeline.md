@@ -46,6 +46,7 @@
 - **Спеки и тикеты** → GitHub Issues (`docs/agents/issue-tracker.md`)
 - **Метки триажа** → `docs/agents/triage-labels.md`
 - **Правила чтения домена** → `docs/agents/domain.md`
+- **Навигация по коду** → `codegraph explore "<символы>"` (локальный индекс `.codegraph/`, markdown не индексируется — см. `AGENTS.md`, раздел 3)
 
 ## Личные задачи (не код)
 
