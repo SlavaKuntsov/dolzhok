@@ -101,20 +101,11 @@ def test_item_summary_with_and_without_price() -> None:
     assert item_summary(unpriced) == "#4 · 🆕 · нет цены"
 
 
-def test_item_summary_appends_title_after_money() -> None:
-    item = Item(
-        id=10,
-        url="https://ozon.ru/product/x-10",
-        created_by=1,
-        title="Лента шлифовальная 760 мм, 25 мм P400",
-        price_kop=2425,
-    )
-    assert item_summary(item) == "#10 · 🆕 · 24,25 BYN · Лента шлифовальная 760 мм, 25 мм P400"
-
-
 @pytest.mark.parametrize(
     ("title", "expected_segment"),
     [
+        # canonical spec example: a Title under the cap passes through untouched
+        ("Лента шлифовальная 760 мм, 25 мм P400", "Лента шлифовальная 760 мм, 25 мм P400"),
         # exactly 40 characters is untouched
         ("а" * 40, "а" * 40),
         # longer Title: cut at the last space at or before 40, head kept, ellipsis added
