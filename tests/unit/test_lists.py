@@ -109,9 +109,7 @@ def test_list_page_message_rows_show_titles() -> None:
     )
     kwargs = list_page_message(response)
     rows = kwargs["reply_markup"].inline_keyboard[1:3]
-    assert rows[0][0].text == (
-        "#4 · 🆕 · 1 299,50 BYN · Лента шлифовальная 760 мм, 25 мм P400"
-    )
+    assert rows[0][0].text == ("#4 · 🆕 · 1 299,50 BYN · Лента шлифовальная 760 мм, 25 мм P400")
     assert rows[1][0].text == "#5 · 📦 · нет цены · Дрель аккумуляторная"
     # tapping a row still opens that Item's card
     assert rows[0][0].callback_data == "view:4"
