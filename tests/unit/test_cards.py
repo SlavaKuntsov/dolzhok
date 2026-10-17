@@ -134,3 +134,15 @@ def test_item_summary_title_segment(title: str | None, expected_segment: str | N
         assert label == "#1 · 🆕 · нет цены"
     else:
         assert label == f"#1 · 🆕 · нет цены · {expected_segment}"
+
+
+def test_item_summary_appends_title_after_formatted_money() -> None:
+    """A priced Item carries its money and then the Title — not `нет цены`."""
+    item = Item(
+        id=1,
+        url="https://ozon.ru/product/x-1",
+        created_by=1,
+        price_kop=2425,
+        title="Дрель аккумуляторная",
+    )
+    assert item_summary(item) == "#1 · 🆕 · 24,25 BYN · Дрель аккумуляторная"
