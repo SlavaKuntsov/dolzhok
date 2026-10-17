@@ -113,17 +113,21 @@ def test_item_summary_with_and_without_price() -> None:
             "Лента шлифовальная 760 мм, 25 мм P400 из Германии",
             "Лента шлифовальная 760 мм, 25 мм P400…",
         ),
+        # last space sits exactly at index 39: keep characters 0..38, then `…`
+        ("а" * 39 + " " + "б" * 10, "а" * 39 + "…"),
         # no space within the first 40 characters: hard-cut at 40 with ellipsis
         ("а" * 50, "а" * 40 + "…"),
         # newlines and runs of spaces collapse into single spaces
         ("Лента\nшлифовальная   760", "Лента шлифовальная 760"),
-        # whitespace-only Title is absent: no segment, no dangling separator
+        # absent Title: no segment, no dangling separator
+        (None, None),
+        # whitespace-only Title is absent too
         ("   ", None),
         # `&`, `<` and quotes appear verbatim, never escaped
         ('Болт & гайка <M8> "x"', 'Болт & гайка <M8> "x"'),
     ],
 )
-def test_item_summary_title_segment(title: str, expected_segment: str | None) -> None:
+def test_item_summary_title_segment(title: str | None, expected_segment: str | None) -> None:
     item = Item(id=1, url="https://ozon.ru/product/x-1", created_by=1, title=title)
     label = item_summary(item)
     if expected_segment is None:
