@@ -80,14 +80,14 @@ def format_item_card(item: Item) -> str:
 
 
 # Compact list rows cut the Title to this many characters (Title segment only).
-TITLE_MAX_LEN = 40
+_TITLE_MAX_LEN = 40
 
 
 def _title_segment(title: str | None) -> str | None:
     """Single-line Title for a compact list row, or None when there is none.
 
     Whitespace runs (newlines included) collapse to one space. A normalized Title
-    longer than TITLE_MAX_LEN is cut at the last space at or before the cap with
+    longer than _TITLE_MAX_LEN is cut at the last space at or before the cap with
     `…` (keeping the identifying head); with no such space it hard-cuts at the
     cap. Not HTML-escaped: keyboard labels are plain text.
     """
@@ -96,9 +96,9 @@ def _title_segment(title: str | None) -> str | None:
     collapsed = " ".join(title.split())
     if not collapsed:
         return None
-    if len(collapsed) <= TITLE_MAX_LEN:
+    if len(collapsed) <= _TITLE_MAX_LEN:
         return collapsed
-    head = collapsed[:TITLE_MAX_LEN]
+    head = collapsed[:_TITLE_MAX_LEN]
     cut = head.rfind(" ")
     if cut == -1:
         return f"{head}…"
