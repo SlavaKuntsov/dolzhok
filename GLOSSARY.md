@@ -47,7 +47,7 @@ A non-negative amount held in kopecks (minor units), displayed as roubles like `
 _Avoid_: amount, value, price
 
 **Debt**:
-Money the customer owes the executor: prepaid items still in work (ordered or received) plus the manual debt. Shown broken down as «Долг по товарам» + «Долги за прошлое» for the executor.
+Money the customer owes the executor: prepaid items still in work (ordered or received) plus the manual debt. Shown as «Долг» to the customer and broken down as «Долг по товарам» + «Долги за прошлое» to the executor.
 _Avoid_: total, amount owed, balance, sum
 
 **Manual debt**:

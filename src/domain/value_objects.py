@@ -26,6 +26,11 @@ class Money:
         return f"{grouped},{kop:02d} BYN"
 
 
+def format_signed_rub(kop: int) -> str:
+    """Render a signed amount; `Money` itself forbids negative values."""
+    return f"-{Money(-kop).format_rub()}" if kop < 0 else Money(kop).format_rub()
+
+
 def parse_signed_price_to_kop(text: str) -> int:
     """Parse ``1 299,50`` or ``-500`` into signed kopecks.
 

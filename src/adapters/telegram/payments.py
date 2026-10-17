@@ -12,7 +12,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from src.adapters.telegram.keyboards import debt_menu_keyboard
 from src.domain.entities import Repayment
 from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
-from src.domain.value_objects import Money
+from src.domain.value_objects import Money, format_signed_rub
 from src.use_cases.calc_balance import CalcBalanceResponse, CalcBalanceUseCase
 from src.use_cases.calc_debt import CalcDebtResponse, CalcDebtUseCase
 from src.use_cases.list_repayments import ListRepaymentsResponse
@@ -24,7 +24,7 @@ def _money(kop: int) -> str:
 
 def _signed_money(kop: int) -> str:
     """Like `_money` but permits negative balances (past-debt overpayment)."""
-    return f"-{Money(-kop).format_rub()}" if kop < 0 else Money(kop).format_rub()
+    return format_signed_rub(kop)
 
 
 def format_debt_text(
@@ -50,7 +50,7 @@ def format_debt_text(
     if balance.advance_kop:
         lines.append("✅ Остаток: 0,00 BYN")
         lines.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
-    elif balance.total_kop or balance.repaid_count:
+    elif balance.total_kop or balance.repaid_count or balance.debt_count or balance.manual_kop:
         lines.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
     if debt.postpaid_count:
         lines.append(f"⏳ Ждет постоплаты: {_money(debt.postpaid_kop)} ({debt.postpaid_count} шт)")

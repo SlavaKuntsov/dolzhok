@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.persistence.models import ManualDebtModel
 from src.domain.entities import ManualDebt
 from src.domain.interfaces import IManualDebtRepository
+
+# The table is constrained to this id, so concurrent inserts fail loudly
+# instead of silently leaving a second, unread row behind.
+SINGLETON_ID = 1
 
 
 def _to_entity(model: ManualDebtModel) -> ManualDebt:
@@ -24,26 +27,18 @@ class SqlAlchemyManualDebtRepository(IManualDebtRepository):
 
     async def get(self) -> ManualDebt:
         async with self._sessions() as session:
-            result = await session.execute(
-                select(ManualDebtModel).order_by(ManualDebtModel.id).limit(1)
-            )
-            model = result.scalar_one_or_none()
+            model = await session.get(ManualDebtModel, SINGLETON_ID)
             return _to_entity(model) if model else ManualDebt()
 
     async def save(self, manual_debt: ManualDebt) -> ManualDebt:
         async with self._sessions() as session:
             async with session.begin():
-                model: ManualDebtModel | None = None
-                if manual_debt.id is not None:
-                    model = await session.get(ManualDebtModel, manual_debt.id)
-                if model is None:
-                    result = await session.execute(
-                        select(ManualDebtModel).order_by(ManualDebtModel.id).limit(1)
-                    )
-                    model = result.scalar_one_or_none()
+                model = await session.get(ManualDebtModel, SINGLETON_ID)
                 if model is None:
                     model = ManualDebtModel(
-                        amount_kop=manual_debt.amount_kop, updated_at=manual_debt.updated_at
+                        id=SINGLETON_ID,
+                        amount_kop=manual_debt.amount_kop,
+                        updated_at=manual_debt.updated_at,
                     )
                     session.add(model)
                 else:

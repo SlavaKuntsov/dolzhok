@@ -16,7 +16,7 @@ from src.adapters.telegram.keyboards import (
 from src.adapters.telegram.payments import send_debt
 from src.domain.errors import DomainError
 from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
-from src.domain.value_objects import Money, parse_signed_price_to_kop
+from src.domain.value_objects import format_signed_rub, parse_signed_price_to_kop
 from src.infrastructure.config import Settings
 from src.use_cases.adjust_manual_debt import AdjustManualDebtRequest, AdjustManualDebtUseCase
 from src.use_cases.set_manual_debt import SetManualDebtRequest, SetManualDebtUseCase
@@ -33,11 +33,6 @@ _EDIT_PROMPT = (
 _DENIED = "Долг за прошлое меняет только исполнитель 😉"
 _RESET_DENIED = "Сбрасывать долг может только исполнитель 😉"
 _BAD_AMOUNT = "Не похоже на сумму"
-
-
-def _fmt(kop: int) -> str:
-    """Render a signed amount (past debt may be negative)."""
-    return f"-{Money(-kop).format_rub()}" if kop < 0 else Money(kop).format_rub()
 
 
 def build_manual_debt_router(settings: Settings) -> Router:
@@ -79,7 +74,7 @@ def build_manual_debt_router(settings: Settings) -> Router:
             await message.answer(f"Не получилось: {exc}\nПопробуй еще раз или /cancel.")
             return
         await state.clear()
-        await message.answer(f"✅ Долг за прошлое: {_fmt(amount)}")
+        await message.answer(f"✅ Долг за прошлое: {format_signed_rub(amount)}")
         await _show(message, item_repo, repayment_repo, manual_repo)
 
     @router.message(F.text == BTN_MANUAL_ADD, F.from_user.id == executor_id)
@@ -101,7 +96,7 @@ def build_manual_debt_router(settings: Settings) -> Router:
         await state.clear()
         current = await manual_debt_repo.get()
         await message.answer(
-            f"🗑 Сбросить долг за прошлое ({_fmt(current.amount_kop)})?",
+            f"🗑 Сбросить долг за прошлое ({format_signed_rub(current.amount_kop)})?",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
@@ -125,6 +120,9 @@ def build_manual_debt_router(settings: Settings) -> Router:
             delta_kop = parse_signed_price_to_kop(message.text)
         except DomainError as exc:
             await message.answer(f"{_BAD_AMOUNT}: {exc}\nПопробуй еще раз или /cancel.")
+            return
+        if delta_kop == 0:
+            await message.answer("Сумма не может быть нулевой. Попробуй еще раз или /cancel.")
             return
         await _save(
             message,

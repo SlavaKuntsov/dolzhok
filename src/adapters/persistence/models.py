@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Integer, String, Text
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -29,6 +29,7 @@ class ItemModel(Base):
 
 class ManualDebtModel(Base):
     __tablename__ = "manual_debts"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_manual_debts_single_row"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     amount_kop: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)

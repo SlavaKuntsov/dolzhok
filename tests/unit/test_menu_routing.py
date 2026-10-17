@@ -11,7 +11,7 @@ from typing import Any
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Chat, Message, Update, User
+from aiogram.types import CallbackQuery, Chat, Message, Update, User
 
 from src.adapters.telegram.keyboards import (
     BTN_BACK,
@@ -79,6 +79,27 @@ async def _feed(
             chat=Chat(id=uid, type="private"),
             from_user=User(id=uid, is_bot=False, first_name="u"),
             text=text,
+        ),
+    )
+    await dispatcher.feed_update(bot, update)
+
+
+async def _feed_callback(
+    dispatcher: Dispatcher, bot: Bot, session: _FakeSession, uid: int, data: str
+) -> None:
+    update = Update(
+        update_id=len(session.calls) + 1,
+        callback_query=CallbackQuery(
+            id=str(len(session.calls) + 1),
+            from_user=User(id=uid, is_bot=False, first_name="u"),
+            chat_instance="chat-instance",
+            data=data,
+            message=Message(
+                message_id=len(session.calls) + 1,
+                date=datetime.now(UTC),
+                chat=Chat(id=uid, type="private"),
+                text="debt",
+            ),
         ),
     )
     await dispatcher.feed_update(bot, update)
@@ -165,5 +186,59 @@ async def test_manual_debt_add_flow_executor_only() -> None:
         await _feed(dispatcher, bot, session, EXECUTOR_ID, "-200")
         assert (await manual.get()).amount_kop == 30000
         assert "Долги за прошлое: 300,00 BYN" in session.calls[-1].text
+    finally:
+        await session.close()
+
+
+async def test_manual_debt_reset_requires_confirmation() -> None:
+    settings = _settings()
+    dispatcher = Dispatcher(storage=MemoryStorage())
+    dispatcher["item_repo"] = InMemoryItemRepository()
+    dispatcher["repayment_repo"] = InMemoryRepaymentRepository()
+    manual = InMemoryManualDebtRepository(amount_kop=50000)
+    dispatcher["manual_debt_repo"] = manual
+    dispatcher["app_settings"] = settings
+    dispatcher.include_router(build_root_router(settings))
+
+    bot = Bot(token=_TOKEN)
+    session = _FakeSession(bot)
+    bot.session = session  # type: ignore[assignment]
+
+    try:
+        # Cancel keeps the figure untouched.
+        await _feed_callback(dispatcher, bot, session, EXECUTOR_ID, "mdreset:no")
+        assert (await manual.get()).amount_kop == 50000
+
+        # Customer cannot reset.
+        await _feed_callback(dispatcher, bot, session, CUSTOMER_ID, "mdreset:ok")
+        assert (await manual.get()).amount_kop == 50000
+        assert session.calls[-1].text == "Сбрасывать долг может только исполнитель 😉"
+
+        # Executor confirms: figure becomes zero.
+        await _feed_callback(dispatcher, bot, session, EXECUTOR_ID, "mdreset:ok")
+        assert (await manual.get()).amount_kop == 0
+    finally:
+        await session.close()
+
+
+async def test_manual_debt_zero_delta_is_rejected() -> None:
+    settings = _settings()
+    dispatcher = Dispatcher(storage=MemoryStorage())
+    dispatcher["item_repo"] = InMemoryItemRepository()
+    dispatcher["repayment_repo"] = InMemoryRepaymentRepository()
+    manual = InMemoryManualDebtRepository()
+    dispatcher["manual_debt_repo"] = manual
+    dispatcher["app_settings"] = settings
+    dispatcher.include_router(build_root_router(settings))
+
+    bot = Bot(token=_TOKEN)
+    session = _FakeSession(bot)
+    bot.session = session  # type: ignore[assignment]
+
+    try:
+        await _feed(dispatcher, bot, session, EXECUTOR_ID, BTN_MANUAL_ADD)
+        await _feed(dispatcher, bot, session, EXECUTOR_ID, "0")
+        assert (await manual.get()).amount_kop == 0
+        assert "не может быть нулевой" in session.calls[-1].text
     finally:
         await session.close()

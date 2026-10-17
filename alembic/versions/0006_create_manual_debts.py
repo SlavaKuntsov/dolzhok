@@ -19,6 +19,7 @@ def upgrade() -> None:
         sa.Column("amount_kop", sa.BigInteger(), nullable=False, server_default="0"),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint("id = 1", name="ck_manual_debts_single_row"),
     )
 
 
