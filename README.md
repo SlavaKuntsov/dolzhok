@@ -118,9 +118,11 @@ make deploy
 - **Соединения на serverless.** Для Postgres клиентский пул отключён
   (`NullPool`): пулинг делает Neon-пулер. Иначе замороженный инстанс Vercel
   отдаёт соединение, которое Neon уже закрыл (`InterfaceError: connection is closed`).
-- **Дрейф диалектов.** `tests/integration/test_postgres_repo.py` гоняет миграции
-  и repo-раундтрип на Postgres (опционально):
-  `TEST_DATABASE_URL='postgresql+asyncpg://…' uv run pytest tests/integration`.
+- **Дрейф диалектов.** `make test-pg TEST_DATABASE_URL='postgresql://…'` гоняет
+  миграции и repo-раундтрип на Postgres (опционально, нужна отдельная БД).
+  Без `TEST_DATABASE_URL` тест скипается, поэтому в `make check` его нет.
+  `make test-pg-reset` — destructive-проверка sequence в `0003` (только на
+  scratch-БД: откатывает схему до `0002` и обратно).
 - **Известное ограничение (FSM).** Диспатчер использует `MemoryStorage`: на
   serverless состояние FSM живёт в конкретном инстансе и теряется при cold start,
   поэтому многошаговые флоу (`/pay`) могут сброситься между апдейтами. Нужен

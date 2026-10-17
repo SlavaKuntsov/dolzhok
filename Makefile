@@ -1,4 +1,4 @@
-.PHONY: sync lint typecheck test check migrate revision run deploy vercel-deploy webhook-set webhook-delete webhook-info fly-init deploy-fly logs backup restore restart clean
+.PHONY: sync lint typecheck test test-pg test-pg-reset check migrate revision run deploy vercel-deploy webhook-set webhook-delete webhook-info fly-init deploy-fly logs backup restore restart clean
 
 # Install/sync dependencies from lockfile
 sync:
@@ -16,6 +16,18 @@ typecheck:
 # Run unit tests (quiet)
 test:
 	uv run pytest -q
+
+# Opt-in SQLite<->Postgres drift guard. Needs a scratch database:
+#   make test-pg TEST_DATABASE_URL='postgresql://user:pass@host/db'
+test-pg:
+	@test -n "$(TEST_DATABASE_URL)" || { echo "usage: make test-pg TEST_DATABASE_URL='postgresql://…'"; exit 1; }
+	@TEST_DATABASE_URL='$(TEST_DATABASE_URL)' uv run pytest tests/integration/test_postgres_repo.py -q
+
+# Destructive: rewinds the schema to 0002 and back (checks the 0003 sequence fix).
+# Scratch database only — never point this at a database you care about.
+test-pg-reset:
+	@test -n "$(TEST_DATABASE_URL_RESET)" || { echo "usage: make test-pg-reset TEST_DATABASE_URL_RESET='postgresql://…'"; exit 1; }
+	@TEST_DATABASE_URL_RESET='$(TEST_DATABASE_URL_RESET)' uv run pytest tests/integration/test_migration_0003_sequence.py -q
 
 # Full local gate: lint + types + tests
 check: lint typecheck test

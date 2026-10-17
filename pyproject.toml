@@ -13,6 +13,8 @@ dependencies = [
   "alembic>=1.13",
   "pydantic>=2",
   "pydantic-settings>=2",
+  # Imported by alembic/env.py to load DATABASE_URL from .env.
+  "python-dotenv>=1.0",
 ]
 
 [dependency-groups]

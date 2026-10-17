@@ -67,6 +67,25 @@ async def test_webhook_rejects_bad_secret() -> None:
     assert dispatcher.updates == []
 
 
+async def test_webhook_accepts_when_secret_is_empty() -> None:
+    # Empty env var means "not configured": the endpoint must stay open, same
+    # as the startup warning says.
+    dispatcher = _FakeDispatcher()
+    async with _client(_app(dispatcher, "")) as client:
+        resp = await client.post("/webhook", json=_UPDATE)
+    assert resp.status_code == 200
+    assert len(dispatcher.updates) == 1
+
+
+async def test_webhook_accepts_whitespace_secret() -> None:
+    # `WEBHOOK_SECRET=' '` is a misconfiguration, not a secret nobody can send.
+    dispatcher = _FakeDispatcher()
+    async with _client(_app(dispatcher, "   ")) as client:
+        resp = await client.post("/webhook", json=_UPDATE)
+    assert resp.status_code == 200
+    assert len(dispatcher.updates) == 1
+
+
 async def test_webhook_accepts_good_secret() -> None:
     dispatcher = _FakeDispatcher()
     async with _client(_app(dispatcher, "s3cret")) as client:
