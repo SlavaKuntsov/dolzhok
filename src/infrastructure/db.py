@@ -17,19 +17,25 @@ from src.adapters.persistence.models import Base
 
 
 def create_engine(database_url: str) -> AsyncEngine:
-    return create_async_engine(_normalize_url(database_url), future=True)
+    return create_async_engine(normalize_database_url(database_url), future=True)
 
 
-def _normalize_url(database_url: str) -> URL:
-    """Adapt libpq-style query params (Neon) to what asyncpg accepts.
+def normalize_database_url(database_url: str) -> URL:
+    """Make a user-supplied URL usable by the async engine.
 
-    Neon hands out URLs like ``...?sslmode=require&channel_binding=require``.
-    asyncpg has no ``sslmode``/``channel_binding`` knobs: it takes ``ssl`` (the
-    sslmode string) and rejects unknown params. Translate, dropping the rest.
+    - Bare ``postgresql://`` (what Neon/Heroku hand out) defaults to the sync
+      psycopg2 driver; point it at ``asyncpg`` instead.
+    - Neon appends ``?sslmode=require&channel_binding=require``; asyncpg has no
+      such knobs — it takes ``ssl`` (the sslmode string) and rejects unknown
+      params. Translate, dropping the rest.
     """
     url = make_url(database_url)
-    if url.get_backend_name() != "postgresql" or url.get_driver_name() != "asyncpg":
+    if url.get_backend_name() != "postgresql":
         return url
+    if url.drivername == "postgresql":  # no explicit driver -> asyncpg
+        url = url.set(drivername="postgresql+asyncpg")
+    elif url.get_driver_name() != "asyncpg":
+        return url  # an explicit non-asyncpg driver: leave the choice alone
     query = dict(url.query)
     sslmode = query.pop("sslmode", None)
     query.pop("channel_binding", None)

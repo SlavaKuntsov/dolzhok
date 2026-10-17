@@ -22,7 +22,7 @@ from alembic import command
 from src.adapters.persistence.repayment_repo import SqlAlchemyRepaymentRepository
 from src.adapters.persistence.sqlalchemy_repo import SqlAlchemyItemRepository
 from src.domain.entities import Item, ItemStatus, Repayment
-from src.infrastructure.db import _normalize_url, create_engine
+from src.infrastructure.db import create_engine, normalize_database_url
 
 URL = os.environ.get("TEST_DATABASE_URL")
 
@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]
 @pytest.fixture(scope="module", autouse=True)
 def _migrated() -> Iterator[None]:
     assert URL is not None
-    normalized = _normalize_url(URL).render_as_string(hide_password=False)
+    normalized = normalize_database_url(URL).render_as_string(hide_password=False)
     previous = os.environ.get("DATABASE_URL")
     os.environ["DATABASE_URL"] = normalized
     config = Config(str(ROOT / "alembic.ini"))

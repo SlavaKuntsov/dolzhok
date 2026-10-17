@@ -72,11 +72,15 @@ Fly.io — `docs/adr/0001-vercel-neon-webhook-over-fly.md`.
 
 ### Первичная настройка (руками, один раз)
 
-1. **Neon**: создать проект/базу, скопировать connection string. Вставь драйвер:
-   `DATABASE_URL=postgresql+asyncpg://user:pass@ep-….neon.tech/db?sslmode=require`
-   (`sslmode`/`channel_binding` из строки Neon нормализуются под asyncpg в коде).
-2. **Миграции на Neon** (с локальной машины):
-   `DATABASE_URL='postgresql+asyncpg://…' make migrate`
+1. **Neon**: создать проект/базу, скопировать connection string в `DATABASE_URL`
+   (можно как есть, `postgresql://…` — драйвер поднимется до `asyncpg`, а
+   `sslmode`/`channel_binding` нормализуются в коде).
+2. **Миграции на Neon** (с локальной машины). `make migrate` читает `DATABASE_URL`
+   из окружения **или `.env`**. Для миграций бери **direct** (`ep-…`, без
+   `-pooler`) хост: пулер в transaction-mode ломает DDL.
+   ```bash
+   make migrate   # DATABASE_URL уже в .env, либо: DATABASE_URL='postgresql://…' make migrate
+   ```
 3. **Vercel**: импортировать репозиторий, задать env (Production):
    `BOT_TOKEN`, `CUSTOMER_ID`, `EXECUTOR_ID`, `DATABASE_URL`,
    `WEBHOOK_BASE_URL=https://<app>.vercel.app`, `WEBHOOK_SECRET=<random string>`.

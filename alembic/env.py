@@ -7,20 +7,29 @@ import os
 from logging.config import fileConfig
 from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from src.adapters.persistence.models import Base
+from src.infrastructure.db import normalize_database_url
 
 config = context.config
 
-# Prefer the runtime DATABASE_URL (Fly secret / shell env) over the alembic.ini
-# default so the container migrates the mounted volume DB, not a local path.
+# Honor DATABASE_URL from .env, not just the process env, so `make migrate`
+# targets the same database the app does (pydantic-settings reads .env too).
+load_dotenv()
+
+# Prefer the runtime DATABASE_URL (Neon / shell env /.env) over the alembic.ini
+# default so migrations hit the right database, not a local path.
 _env_url = os.environ.get("DATABASE_URL")
 if _env_url:
-    config.set_main_option("sqlalchemy.url", _env_url)
+    normalized = normalize_database_url(_env_url).render_as_string(hide_password=False)
+    # set_main_option goes through ConfigParser: escape literal '%' (e.g. in a
+    # password) so interpolation doesn't choke.
+    config.set_main_option("sqlalchemy.url", normalized.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

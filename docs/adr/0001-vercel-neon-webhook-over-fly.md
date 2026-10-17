@@ -18,4 +18,4 @@ We run the bot as Telegram **webhooks** on a Vercel Python function (Hobby, non-
 - Webhook ASGI app: `src/adapters/webhook/app.py` (`create_app`, `POST /webhook`, `GET /` health), exposed to Vercel via `asgi.py` + `[tool.vercel] entrypoint`.
 - Shared wiring for polling and webhook: `src/infrastructure/bootstrap.py`.
 - Register/unregister: `python -m src.adapters.webhook.manage set|delete|info` (`make webhook-*`); `WEBHOOK_SECRET` verified against the `X-Telegram-Bot-Api-Secret-Token` header.
-- Postgres URL params (`sslmode`/`channel_binding`) are normalized to asyncpg's `ssl` in `src/infrastructure/db.py`; `init_db` creates tables only for SQLite (Postgres schema is Alembic-owned).
+- Postgres URL params (`sslmode`/`channel_binding`) are normalized to asyncpg's `ssl`, and a bare `postgresql://` URL is upgraded to the `asyncpg` driver, in `src/infrastructure/db.py`; `alembic/env.py` loads `.env` so `make migrate` targets the same database as the app. `init_db` creates tables only for SQLite (Postgres schema is Alembic-owned).
