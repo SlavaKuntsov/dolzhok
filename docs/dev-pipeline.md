@@ -33,6 +33,12 @@
 - **Ты вызываешь слэшем** (оркестраторы): `/ask-matt` (роутер), `/grill-with-docs`, `/to-spec`, `/to-tickets`, `/triage`, `/implement`, `/implement-spec`, `/wayfinder`, `/retro`, `/improve-codebase-architecture`, `/setup-matt-pocock-skills`.
 - **Агент подтягивает сам по задаче** (дисциплина): `/tdd`, `/code-review`, `/diagnosing-bugs`, `/domain-modeling`, `/codebase-design`, `/pr`, `/prototype`, `/research`, `/wizard`, `/grilling`, `/writing-for-agents`.
 
+## Ветки и спеки
+
+- Работа идёт в ветке от `main` (`feat/<phase>-<slug>`, `fix/...`); `main` не коммитим напрямую. `/implement` коммитит в **текущую** ветку, поэтому ветку создаём сами до запуска (`git switch -c … origin/main`).
+- **Спека** — issue со списком задач/чеклистом (как SPEC-006) — это не тикет для агента. Пайплайн: `/to-tickets` (вертикальные tracer-bullet sub-issues + `Blocked by`) → `/triage` (`ready-for-agent` / `ready-for-human`). Реализация: вся спека — `/implement-spec <spec>` (integration branch + субагенты), один тикет — `/implement <ticket>`.
+- Тикеты, которым нужны чужие креды/аккаунты (деплой, smoke, teardown) — `ready-for-human`, агент их не берёт.
+
 ## Где что лежит
 
 - **Язык** → `GLOSSARY.md`

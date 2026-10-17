@@ -1,4 +1,4 @@
-.PHONY: sync lint typecheck test check migrate revision run deploy fly-init logs backup restore restart clean
+.PHONY: sync lint typecheck test check migrate revision run deploy vercel-deploy webhook-set webhook-delete webhook-info fly-init deploy-fly logs backup restore restart clean
 
 # Install/sync dependencies from lockfile
 sync:
@@ -20,7 +20,8 @@ test:
 # Full local gate: lint + types + tests
 check: lint typecheck test
 
-# Apply DB migrations to head
+# Apply DB migrations to head (local SQLite, or Neon when DATABASE_URL is set
+# in the environment or .env)
 migrate:
 	mkdir -p data
 	uv run alembic upgrade head
@@ -33,17 +34,39 @@ revision:
 run:
 	uv run python -m src.main
 
-# Deploy to Fly.io (free tier, volume /data)
-deploy:
+# Deploy to Vercel (prod) and (re)register the webhook. Migrations run
+# separately: `make migrate` (DATABASE_URL from env/.env, see README "Deploy").
+deploy: vercel-deploy webhook-set
+
+# Push the code to Vercel only (no webhook call).
+vercel-deploy:
+	vercel deploy --prod
+
+# Register the Telegram webhook (needs WEBHOOK_BASE_URL + WEBHOOK_SECRET).
+webhook-set:
+	uv run python -m src.adapters.webhook.manage set
+
+# Unregister the webhook (switch back to long polling).
+webhook-delete:
+	uv run python -m src.adapters.webhook.manage delete
+
+# Show the current webhook registration.
+webhook-info:
+	uv run python -m src.adapters.webhook.manage info
+
+# --- Fly.io path: REJECTED (ADR-0001). Kept as an optional non-prod fallback. ---
+
+# Deploy to Fly.io (rejected; see ADR-0001)
+deploy-fly:
 	fly deploy
 
-# First-time Fly.io setup (no deploy): app + volume + remind about secrets
+# First-time Fly.io setup (rejected; ADR-0001): app + volume + secrets reminder
 fly-init:
 	fly launch --no-deploy --copy-config
 	fly volumes create data --size 1 --region ams
 	@echo "Next: fly secrets set BOT_TOKEN=... CUSTOMER_ID=... EXECUTOR_ID=...  &&  make deploy"
 
-# Tail production logs on Fly.io
+# Tail production logs on Fly.io (rejected path)
 logs:
 	fly logs
 

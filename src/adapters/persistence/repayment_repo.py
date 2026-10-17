@@ -32,7 +32,7 @@ def _to_model(entity: Repayment) -> RepaymentModel:
     )
 
 
-class SqliteRepaymentRepository(IRepaymentRepository):
+class SqlAlchemyRepaymentRepository(IRepaymentRepository):
     """IRepaymentRepository backed by an async SQLAlchemy session."""
 
     def __init__(self, session_factory: Callable[[], AsyncSession]) -> None:

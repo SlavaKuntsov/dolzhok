@@ -11,5 +11,8 @@ data/
 backup-*.sql
 .DS_Store
 
+# Vercel CLI local state
+.vercel/
+
 # CodeGraph local index (tooling artifact)
 .codegraph/

@@ -1,4 +1,4 @@
-"""SQLite implementation of IItemRepository (SQLAlchemy async)."""
+"""SQLAlchemy implementation of IItemRepository (SQLite + Postgres)."""
 
 from __future__ import annotations
 
@@ -42,8 +42,8 @@ def _to_model(entity: Item) -> ItemModel:
     )
 
 
-class SqliteItemRepository(IItemRepository):
-    """IItemRepository backed by SQLite via SQLAlchemy async session."""
+class SqlAlchemyItemRepository(IItemRepository):
+    """IItemRepository backed by an async SQLAlchemy session."""
 
     def __init__(self, session_factory: Callable[[], AsyncSession]) -> None:
         self._sessions = session_factory
