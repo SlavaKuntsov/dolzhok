@@ -71,10 +71,10 @@ async def init_db(engine: AsyncEngine) -> None:
             db_file.parent.mkdir(parents=True, exist_ok=True)
         async with engine.begin() as conn:
             await conn.execute(text("PRAGMA journal_mode=WAL"))
-    await _ensure_migrated(engine)
+    await _require_schema(engine)
 
 
-async def _ensure_migrated(engine: AsyncEngine) -> None:
+async def _require_schema(engine: AsyncEngine) -> None:
     """Raise a clear error when the schema has not been created by Alembic."""
     async with engine.connect() as conn:
         has_schema = await conn.run_sync(lambda sync_conn: inspect(sync_conn).has_table("items"))

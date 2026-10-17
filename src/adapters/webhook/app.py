@@ -39,8 +39,10 @@ def build_webhook_router() -> APIRouter:
     @router.post("/webhook")
     async def webhook(request: Request) -> Response:
         state = request.app.state
-        secret: str | None = getattr(state, "webhook_secret", None)
-        if secret is not None and request.headers.get(SECRET_HEADER) != secret:
+        # Blank/whitespace means "not configured" (a blank env var), not
+        # "reject every update".
+        secret = (getattr(state, "webhook_secret", None) or "").strip() or None
+        if secret and request.headers.get(SECRET_HEADER) != secret:
             logger.warning("rejected webhook: bad secret token")
             return Response(status_code=403)
         bot: Bot = state.bot
