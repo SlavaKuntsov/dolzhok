@@ -13,7 +13,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from src.adapters.telegram.cards import card_message
-from src.adapters.telegram.fsm import PriceStates, QtyStates, RepaymentStates
+from src.adapters.telegram.fsm import (
+    ManualDebtStates,
+    PriceStates,
+    QtyStates,
+    RepaymentStates,
+)
 from src.adapters.telegram.keyboards import main_menu_keyboard
 from src.domain import ozon
 from src.domain.entities import ItemStatus, PaymentType
@@ -76,6 +81,8 @@ def build_items_router(settings: Settings) -> Router:
         ~StateFilter(
             PriceStates.waiting_price,
             QtyStates.waiting_qty,
+            ManualDebtStates.waiting_amount,
+            ManualDebtStates.waiting_total,
             RepaymentStates.waiting_amount,
             RepaymentStates.waiting_note,
         ),

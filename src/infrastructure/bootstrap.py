@@ -10,6 +10,7 @@ from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from src.adapters.persistence.manual_debt_repo import SqlAlchemyManualDebtRepository
 from src.adapters.persistence.repayment_repo import SqlAlchemyRepaymentRepository
 from src.adapters.persistence.sqlalchemy_repo import SqlAlchemyItemRepository
 from src.adapters.telegram.routers import build_root_router
@@ -23,6 +24,7 @@ def build_dispatcher(settings: Settings, engine: AsyncEngine) -> Dispatcher:
     dispatcher = Dispatcher(storage=MemoryStorage())
     dispatcher["item_repo"] = SqlAlchemyItemRepository(session_factory)
     dispatcher["repayment_repo"] = SqlAlchemyRepaymentRepository(session_factory)
+    dispatcher["manual_debt_repo"] = SqlAlchemyManualDebtRepository(session_factory)
     dispatcher["app_settings"] = settings
     dispatcher.include_router(build_root_router(settings))
     return dispatcher

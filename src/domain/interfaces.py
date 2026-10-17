@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from src.domain.entities import Item, Repayment
+from src.domain.entities import Item, ManualDebt, Repayment
 
 
 class IItemRepository(ABC):
@@ -33,6 +33,18 @@ class IItemRepository(ABC):
     @abstractmethod
     async def update(self, item: Item) -> Item:
         """Persist changes of an existing item."""
+
+
+class IManualDebtRepository(ABC):
+    """Async persistence port for the single past-orders debt figure."""
+
+    @abstractmethod
+    async def get(self) -> ManualDebt:
+        """Return the stored figure, or zero when nothing was entered yet."""
+
+    @abstractmethod
+    async def save(self, manual_debt: ManualDebt) -> ManualDebt:
+        """Store the figure (single row), return it as persisted."""
 
 
 class IRepaymentRepository(ABC):

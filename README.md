@@ -4,8 +4,9 @@ Customer and executor drop Ozon links → the executor orders with their own car
 
 - Customer and executor: both send links, both use `/list` and `/debt`.
 - Executor: buttons `1 New | 2 Ordered | 3 Received | 🚫 Cancel | ✏️ Price | 🔢 Qty` (plus `↩️ Reopen` on closed/cancelled items), commands `/debt /stats /pay /payments`.
-- Menu buttons: `📋 List`, `💰 Debts`, `📊 Stats`, `❌ Cancel` (plus `/menu`, `/cancel`). `💰 Debts` immediately shows the debt summary and an action submenu: `💰 Debt`, `📜 Repayments` and (for the executor) `💸 Repay`, `⬅️ Back`.
+- Menu buttons: `📋 List`, `💰 Debts`, `📊 Stats`, `❌ Cancel` (plus `/menu`, `/cancel`). `💰 Debts` immediately shows the debt summary and an action submenu: `💰 Debt`, `📜 Repayments` and (for the executor) `➕ Debt`, `✏️ Past debt`, `🗑 Reset debt`, `💸 Repay`, `⬅️ Back`.
 - Repayments: the executor sends `💸 Repay` (amount + optional comment), the debt shrinks, the ledger lives in `📜 Repayments` (deleting a wrong entry asks for confirmation).
+- Past-orders debt: `➕ Debt` adds an untracked amount (a negative value subtracts), `✏️ Past debt` overwrites the whole figure (typo fix), `🗑 Reset debt` zeroes it with confirmation. It counts in the debt and the balance but never appears in the item list.
 
 The bot runs 24/7 on Vercel (webhook, FastAPI ASGI) + Neon Postgres. Locally — long polling and a SQLite file. The MacBook is for development only.
 
@@ -37,6 +38,7 @@ Inline buttons under a card exist only for the executor (the customer sees a car
 
 ```
 debt        = Σ (price × qty) WHERE status IN (ORDERED, RECEIVED) AND payment = PREPAID
+            + manual_debt             # signed past-orders figure (may be negative)
 postpaid    = Σ (price × qty) WHERE status = ORDERED AND payment = POSTPAID
 repaid      = Σ repayment.amount_kop
 balance     = debt − repaid            # < 0 → «advance» (overpayment)
@@ -49,7 +51,7 @@ Repayments are a separate cash pool — cancellations do not adjust them automat
 
 ```
 src/domain/         # entities, value objects, IItemRepository/IRepaymentRepository (pure)
-src/use_cases/      # add_item, set_price, set_payment, change_status, calc_debt, calc_stats, add/list/delete_repayment, calc_balance
+src/use_cases/      # add_item, set_price, set_payment, change_status, calc_debt, calc_stats, add/list/delete_repayment, calc_balance, adjust/set_manual_debt
 src/adapters/telegram/     # routers, keyboards, fsm
 src/adapters/persistence/  # sqlalchemy models + SqlAlchemyItem/RepaymentRepository (SQLite + Postgres)
 src/adapters/webhook/      # FastAPI ASGI app (Vercel) + set/delete webhook CLI

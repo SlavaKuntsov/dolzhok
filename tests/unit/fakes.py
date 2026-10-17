@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from src.domain.entities import Item, Repayment
-from src.domain.interfaces import IItemRepository, IRepaymentRepository
+from src.domain.entities import Item, ManualDebt, Repayment
+from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
 
 
 class InMemoryItemRepository(IItemRepository):
@@ -33,6 +33,21 @@ class InMemoryItemRepository(IItemRepository):
         assert item.id is not None
         self._store[item.id] = item
         return item
+
+
+class InMemoryManualDebtRepository(IManualDebtRepository):
+    """Holds the single past-orders debt figure in memory."""
+
+    def __init__(self, amount_kop: int = 0) -> None:
+        self._current = ManualDebt(amount_kop=amount_kop)
+
+    async def get(self) -> ManualDebt:
+        return self._current
+
+    async def save(self, manual_debt: ManualDebt) -> ManualDebt:
+        manual_debt.id = manual_debt.id or 1
+        self._current = manual_debt
+        return manual_debt
 
 
 class InMemoryRepaymentRepository(IRepaymentRepository):

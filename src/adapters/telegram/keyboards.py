@@ -36,6 +36,9 @@ BTN_STATS = "📊 Статистика"
 BTN_CANCEL = "❌ Отмена"
 # Inside the "💰 Долги" submenu; BTN_DEBTS above only opens it.
 BTN_DEBT = "💰 Долг"
+BTN_MANUAL_ADD = "➕ Долг"
+BTN_MANUAL_EDIT = "✏️ Долг за прошлое"
+BTN_MANUAL_RESET = "🗑 Сбросить долг"
 BTN_PAY = "💸 Погасить"
 BTN_PAYMENTS = "📜 Погашения"
 BTN_BACK = "⬅️ Назад"
@@ -175,11 +178,16 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
 def debt_menu_keyboard(*, for_executor: bool) -> ReplyKeyboardMarkup:
     """Submenu for debt/repayments.
 
-    Executor gets the «💸 Погасить» entry; customer sees the read-only actions only.
+    Executor gets «➕ Долг», «✏️ Долг за прошлое», «🗑 Сбросить долг» and «💸 Погасить»;
+    customer sees the read-only actions only.
     """
     rows = [[KeyboardButton(text=BTN_DEBT), KeyboardButton(text=BTN_PAYMENTS)]]
     if for_executor:
-        rows.append([KeyboardButton(text=BTN_PAY), KeyboardButton(text=BTN_BACK)])
+        rows.append([KeyboardButton(text=BTN_MANUAL_ADD), KeyboardButton(text=BTN_PAY)])
+        rows.append(
+            [KeyboardButton(text=BTN_MANUAL_EDIT), KeyboardButton(text=BTN_MANUAL_RESET)]
+        )
+        rows.append([KeyboardButton(text=BTN_BACK)])
     else:
         rows.append([KeyboardButton(text=BTN_BACK)])
     return ReplyKeyboardMarkup(

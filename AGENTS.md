@@ -41,6 +41,12 @@ infrastructure/ # config, engine/session, logging
 - Статусы: любой → любой (кроме того же), свободной выбор кнопками. Повторные ссылки = отдельные товары (дедупа нет).
 - FSM: минимум шагов; цена — парсинг `«1 299,50» → 129950`.
 
+### Навигация по коду (CodeGraph)
+
+- Ищем код через `codegraph explore "<символы или вопрос>"` (MCP-тул `codegraph_explore` или тот же CLI) — сразу отдаёт исходник нужных символов + цепочку вызовов и blast radius. `grep`/`Read` — для конфигов, миграций, `docs/` и когда индекса нет.
+- Markdown (`docs/`, `GLOSSARY.md`, ADR) и YAML не индексируются — там только `grep`/`Read`.
+- Индекс локальный: `.codegraph/` в `.gitignore`, демон синкает сам. `codegraph status` показывает pending — при отставании `codegraph sync`. Нет `.codegraph/` — не создаём без просьбы, работаем `grep`/`Read`.
+
 ## 4. Workflow — скиллы mattpocock (`.agents/skills/`)
 
 Стадии, режимы, кто что вызывает и в каком порядке — `docs/dev-pipeline.md`, единственный источник.
