@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 
+import pytest
+
 from src.adapters.telegram.cards import format_item_card, item_summary
 from src.domain.entities import Item, ItemStatus, PaymentType
 
@@ -97,3 +99,43 @@ def test_item_summary_with_and_without_price() -> None:
     assert item_summary(priced) == "#3 · 🆕 · 2 599,00 BYN"
     unpriced = Item(id=4, url="https://ozon.ru/product/x-4", created_by=1)
     assert item_summary(unpriced) == "#4 · 🆕 · нет цены"
+
+
+def test_item_summary_appends_title_after_money() -> None:
+    item = Item(
+        id=10,
+        url="https://ozon.ru/product/x-10",
+        created_by=1,
+        title="Лента шлифовальная 760 мм, 25 мм P400",
+        price_kop=2425,
+    )
+    assert item_summary(item) == "#10 · 🆕 · 24,25 BYN · Лента шлифовальная 760 мм, 25 мм P400"
+
+
+@pytest.mark.parametrize(
+    ("title", "expected_segment"),
+    [
+        # exactly 40 characters is untouched
+        ("а" * 40, "а" * 40),
+        # longer Title: cut at the last space at or before 40, head kept, ellipsis added
+        (
+            "Лента шлифовальная 760 мм, 25 мм P400 из Германии",
+            "Лента шлифовальная 760 мм, 25 мм P400…",
+        ),
+        # no space within the first 40 characters: hard-cut at 40 with ellipsis
+        ("а" * 50, "а" * 40 + "…"),
+        # newlines and runs of spaces collapse into single spaces
+        ("Лента\nшлифовальная   760", "Лента шлифовальная 760"),
+        # whitespace-only Title is absent: no segment, no dangling separator
+        ("   ", None),
+        # `&`, `<` and quotes appear verbatim, never escaped
+        ('Болт & гайка <M8> "x"', 'Болт & гайка <M8> "x"'),
+    ],
+)
+def test_item_summary_title_segment(title: str, expected_segment: str | None) -> None:
+    item = Item(id=1, url="https://ozon.ru/product/x-1", created_by=1, title=title)
+    label = item_summary(item)
+    if expected_segment is None:
+        assert label == "#1 · 🆕 · нет цены"
+    else:
+        assert label == f"#1 · 🆕 · нет цены · {expected_segment}"

@@ -79,13 +79,43 @@ def format_item_card(item: Item) -> str:
     return "\n".join(lines)
 
 
+# Compact list rows cut the Title to this many characters (Title segment only).
+TITLE_MAX_LEN = 40
+
+
+def _title_segment(title: str | None) -> str | None:
+    """Single-line Title for a compact list row, or None when there is none.
+
+    Whitespace runs (newlines included) collapse to one space. A normalized Title
+    longer than TITLE_MAX_LEN is cut at the last space at or before the cap with
+    `…` (keeping the identifying head); with no such space it hard-cuts at the
+    cap. Not HTML-escaped: keyboard labels are plain text.
+    """
+    if not title:
+        return None
+    collapsed = " ".join(title.split())
+    if not collapsed:
+        return None
+    if len(collapsed) <= TITLE_MAX_LEN:
+        return collapsed
+    head = collapsed[:TITLE_MAX_LEN]
+    cut = head.rfind(" ")
+    if cut == -1:
+        return f"{head}…"
+    return f"{head[:cut]}…"
+
+
 def item_summary(item: Item) -> str:
-    """One-line list entry: `#id · status · money` (no HTML)."""
+    """One-line list entry: `#id · status · money · title` (no HTML)."""
     if item.total_kop is None:
         money = "нет цены"
     else:
         money = Money(item.total_kop).format_rub()
-    return f"#{item.id} · {STATUS_SHORT[item.status]} · {money}"
+    label = f"#{item.id} · {STATUS_SHORT[item.status]} · {money}"
+    title = _title_segment(item.title)
+    if title is not None:
+        label += f" · {title}"
+    return label
 
 
 def card_message(item: Item, *, for_executor: bool, prefix: str = "") -> dict[str, Any]:
