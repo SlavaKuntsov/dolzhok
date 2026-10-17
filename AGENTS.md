@@ -64,6 +64,8 @@ infrastructure/ # config, engine/session, logging
 - Conventional Commits: `feat|fix|chore|docs|test|refactor: ...` (lowercase, без точки).
 - Малые диффы, один use-case = один коммит(ы). Пуш/PR только по просьбе.
 - Никогда не коммитить `.env`, `*.db`, `*.sqlite*`. Только `.env.example`.
+- **Ветка на работу.** Любой тикет/спека — в ветке от свежего `main`: `feat/<phase>-<slug>` (или `fix/...`). В `main` напрямую не коммитим. Скилл `/implement` коммитит в **текущую** ветку — перед стартом сделай `git switch -c feat/<phase>-<slug> origin/main`.
+- **Спека ≠ тикет.** Issue-спека (таблица/чеклист задач, как SPEC-006) не граббится агентом как один тикет: сначала `/to-tickets` → sub-issues с блокировками → `/triage`. Реализация: вся спека — `/implement-spec <spec>` (integration branch); один тикет — `/implement <ticket>`.
 
 ## 7. Definition of Done
 
