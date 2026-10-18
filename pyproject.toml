@@ -24,6 +24,9 @@ dev = [
   "httpx>=0.27",
   "ruff>=0.8",
   "mypy>=1.13",
+  # Editor LSP (`make pyright`) — same engine Zed runs, pinned here so it does
+  # not have to be fetched with `uvx` on every check.
+  "basedpyright>=1.40",
 ]
 
 [tool.pytest.ini_options]
@@ -35,7 +38,23 @@ target-version = "py313"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+# T20 (pyflakes-print) and TID (flake8-tidy-imports) encode the mechanical
+# rules from AGENTS.md §3/§8, so they fail here instead of in review.
+select = ["E", "F", "I", "UP", "B", "T20", "TID"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Layering (AGENTS §3): domain/ and use_cases/ stay framework-free. The
+# layers below opt out via per-file-ignores.
+banned-module-level-imports = ["aiogram", "sqlalchemy", "pydantic"]
+
+[tool.ruff.lint.per-file-ignores]
+# Fatal CLI messages printed to stderr before logging is configured.
+"src/main.py" = ["T20", "TID253"]
+# Framework-facing layers and the composition root (AGENTS §3).
+"src/adapters/**" = ["TID253"]
+"src/infrastructure/**" = ["TID253"]
+"alembic/**" = ["TID253"]
+"tests/**" = ["TID253"]
 
 [tool.mypy]
 python_version = "3.13"

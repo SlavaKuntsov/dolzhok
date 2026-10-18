@@ -1,0 +1,15 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": ["src", "tests", "alembic", "asgi.py"],
+  "exclude": [".venv", "data", ".codegraph", ".vercel"],
+  "typeCheckingMode": "standard",
+  "executionEnvironments": [
+    {
+      "root": "tests",
+      "reportUnusedCallResult": false,
+      "reportAny": false,
+      "reportCallIssue": false
+    }
+  ]
+}
