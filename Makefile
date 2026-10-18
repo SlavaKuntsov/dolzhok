@@ -1,4 +1,4 @@
-.PHONY: sync lint typecheck test test-pg test-pg-reset check migrate revision run deploy vercel-deploy webhook-set webhook-delete webhook-info logs-vercel fly-init deploy-fly logs backup restore restart clean
+.PHONY: sync lint typecheck pyright test test-pg test-pg-reset check migrate revision run deploy vercel-deploy webhook-set webhook-delete webhook-info logs-vercel fly-init deploy-fly logs backup restore restart clean
 
 # Install/sync dependencies from lockfile
 sync:
@@ -9,9 +9,15 @@ lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
-# Strict static type checking of src/
+# Strict static type checking of src/ and alembic/ (env.py is code too — it is
+# outside src/ and would otherwise be checked by nothing).
 typecheck:
-	uv run mypy src
+	uv run mypy src alembic
+
+# Editor-side check: the same basedpyright engine Zed runs, reading
+# pyrightconfig.json (venv = .venv). Slower than mypy; opt-in.
+pyright:
+	uv run basedpyright
 
 # Run unit tests (quiet)
 test:

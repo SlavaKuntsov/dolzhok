@@ -12,20 +12,15 @@
 
 - Python `3.14` (`requires-python >=3.13`), менеджер `uv` only (не pip/poetry).
 - `aiogram >=3,<4`, `sqlalchemy[asyncio]`, `aiosqlite` (local), `asyncpg` (prod), `fastapi` (webhook ASGI), `alembic`, `pydantic-settings`.
-- Линт: `ruff`, типы: `mypy --strict` на `src/`, тесты: `pytest + pytest-asyncio (asyncio_mode=auto)`.
+- Линт: `ruff`, типы: `mypy --strict` на `src/` + `alembic/`, тесты: `pytest + pytest-asyncio (asyncio_mode=auto)`.
 - Деплой: прод — Vercel webhook (`asgi.py` → `src.adapters.webhook.app:app`) + Neon Postgres; локально — long polling + SQLite (ADR-0001).
 
-## 2. Команды (единственный способ запуска)
+## 2. Команды — через `make`
 
-```bash
-uv sync
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy src
-uv run pytest -q
-uv run alembic upgrade head
-uv run python -m src.main
-```
+Инвентарь целей и их смысл — `Makefile` (у каждой цели свой комментарий). Единственный гейт — `make check` (lint + types + tests); он же нужен перед коммитом.
+
+- **Редактор ≠ гейт.** `ruff`/`mypy` запускаются через `uv run` и видят `.venv`; LSP редактора — нет, поэтому `pyrightconfig.json` привязывает basedpyright к `.venv` (иначе в Zed ложные `Import "sqlalchemy" could not be resolved`). Проверка редакторского движка — `make pyright`.
+- **macOS-гочи.** Нет `timeout` и нет GNU-`sed -i`: лимит времени — параметром shell-тула, правки — `edit`-тул или `python - <<'PY'` (BSD-`sed` на UTF-8 падает и молча оставляет файл без изменений).
 
 ## 3. Архитектура — Clean / Hexagonal (обязательно)
 
@@ -50,7 +45,7 @@ infrastructure/ # config, engine/session, logging
 
 ## 4. Workflow — скиллы mattpocock (`.agents/skills/`)
 
-Стадии, режимы, кто что вызывает и в каком порядке — `docs/dev-pipeline.md`, единственный источник.
+**Перед любым `@implement`/написанием кода — сначала `docs/dev-pipeline.md`** (единственный источник стадий, режимов и порядка). Тип входа выбирает скилл: идея → `/grill-with-docs`, спека → `/to-tickets` + `/implement-spec`, тикет → `/implement`. Грилинг, за которым сразу идёт код, — нарушение пайплайна.
 
 Вертикальный срез > горизонтальный слой. Не строить «весь telegram» без use-case и теста: `domain` + `use_case` + `tests/unit/test_<usecase>.py` с `InMemory*` (без БД/сети), затем `adapters` (repo/handler) + `alembic revision` если схема менялась.
 
@@ -64,7 +59,7 @@ infrastructure/ # config, engine/session, logging
 ## 6. Git
 
 - Conventional Commits: `feat|fix|chore|docs|test|refactor: ...` (lowercase, без точки).
-- Малые диффы, один use-case = один коммит(ы). Пуш/PR только по просьбе.
+- Малые диффы, один use-case = один коммит(ы). Сам агент ветку не пушит; вызванный пользователем `/pr` и есть просьба (пуш текущей ветки + PR с `Closes #N`).
 - Никогда не коммитить `.env`, `*.db`, `*.sqlite*`. Только `.env.example`.
 - **Ветка на работу.** Любой тикет/спека — в ветке от свежего `main`: `feat/<phase>-<slug>`, `fix/<slug>` или `chore/<slug>`. В `main` напрямую не коммитим. Скилл `/implement` коммитит в **текущую** ветку — перед стартом сделай `git switch -c feat/<phase>-<slug> origin/main`.
 - **Спека ≠ тикет.** Issue-спека (как SPEC-006) не граббится как один тикет: сначала нарезка на sub-issues с блокировками (см. `docs/dev-pipeline.md`). Реализация: один тикет — `/implement`, вся спека — `/implement-spec`.
@@ -73,16 +68,16 @@ infrastructure/ # config, engine/session, logging
 
 - [ ] issue (spec/тикет) отражает работу и закрыт
 - [ ] unit-тест зелен (in-memory)
-- [ ] `ruff check .` + `ruff format --check .` + `mypy src` + `pytest -q` зеленые (`make check` — lint + types + tests)
+- [ ] `make check` зелёный (lint + types + tests)
 - [ ] миграция `alembic` если менялась схема
 - [ ] `GLOSSARY.md` / ADR обновлены если менялся язык или решение
 - [ ] README обновлён если менялся UX/деплой/формула долга
 
 ## 8. Запреты
 
-- Нет `print` — только `logging`/`structlog`.
+- Нет `print` — только `logging`/`structlog` (проверяет `ruff` `T20`; исключение — фатальные сообщения в stderr в `src/main.py`).
 - Нет блокирующего I/O в async (`requests`, `time.sleep`) — только `httpx`/`aiohttp`, `asyncio.sleep`.
-- Нет SQL в хендлерах. Нет aiogram-импортов в `domain/` и `use_cases/`.
+- Нет SQL в хендлерах. Нет aiogram/sqlalchemy/pydantic в `domain/` и `use_cases/` (проверяет `ruff` `TID253`).
 - Не выдумывать URL/API Ozon — только проверенное или `TODO(spec)` с вопросом.
 
 ## Agent skills

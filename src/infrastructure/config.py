@@ -33,4 +33,6 @@ class Settings(BaseSettings):
 
 
 def get_settings() -> Settings:
-    return Settings()
+    # Required fields come from env: basedpyright cannot see the pydantic-settings
+    # constructor (mypy's pydantic plugin can), so the call looks under-argued.
+    return Settings()  # pyright: ignore[reportCallIssue]
