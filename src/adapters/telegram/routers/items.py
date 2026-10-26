@@ -53,7 +53,6 @@ def parse_reply_price(text: str, replied_text: str | None) -> tuple[int, int] | 
 def build_items_router(settings: Settings) -> Router:
     router = Router(name="items")
     executor_id = settings.executor_id
-    customer_id = settings.customer_id
 
     # NOTE: registered before ingest_link, but ingest_link also excludes
     # waiting states via StateFilter — belt and suspenders against shadowing.
@@ -130,17 +129,19 @@ def build_items_router(settings: Settings) -> Router:
         await message.answer(
             **card_message(item, for_executor=is_executor, prefix=f"✅ Сохранено #{item.id}")
         )
-        # Notify the other party so both chats stay in sync.
-        other_id = customer_id if is_executor else executor_id
-        who = "Исполнитель добавил" if is_executor else "Заказчик прислал"
+        if is_executor:
+            # The executor's own additions never ping the customer: they only see
+            # their own chat, so links added here stay invisible to them.
+            return
+        # Mirror the customer's link into the executor's chat.
         try:
             await bot.send_message(
-                other_id,
-                **card_message(item, for_executor=not is_executor, prefix=f"🆕 {who} #{item.id}"),
+                executor_id,
+                **card_message(item, for_executor=True, prefix=f"🆕 Заказчик прислал #{item.id}"),
             )
         except TelegramBadRequest:
-            # No chat yet: the other party never pressed /start.
-            logger.warning("notify copy to %s failed: chat not found", other_id)
+            # No chat yet: the executor never pressed /start.
+            logger.warning("notify copy to %s failed: chat not found", executor_id)
             await message.answer(
                 "⚠️ Вторая сторона еще не запустила бота (/start) — копия не доставлена."
             )
