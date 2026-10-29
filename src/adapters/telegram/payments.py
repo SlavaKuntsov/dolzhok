@@ -52,17 +52,18 @@ def format_debt_text(
         totals.append(f"🧾 Итого долг: {_signed_money(balance.total_kop)}")
     if balance.repaid_count:
         totals.append(f"💸 Погашено: {_money(balance.repaid_kop)} ({balance.repaid_count} шт)")
+
+    remaining = []
     if balance.advance_kop:
-        totals.append("✅ Остаток: 0,00 BYN")
-        totals.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
+        remaining.append("✅ Остаток: 0,00 BYN")
+        remaining.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
     elif balance.total_kop or balance.repaid_count or balance.debt_count or balance.manual_kop:
-        totals.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
+        remaining.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
 
     blocks = [head]
     if for_executor:
         blocks.append([f"📜 Долги за прошлое: {_signed_money(balance.manual_kop)}"])
-    if totals:
-        blocks.append(totals)
+    blocks += [block for block in (totals, remaining) if block]
     return "\n\n".join("\n".join(block) for block in blocks)
 
 
