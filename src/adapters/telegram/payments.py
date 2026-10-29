@@ -30,30 +30,40 @@ def _signed_money(kop: int) -> str:
 def format_debt_text(
     debt: CalcDebtResponse, balance: CalcBalanceResponse, *, for_executor: bool
 ) -> str:
-    """Debt summary: owed, repaid, remaining balance (or advance), postpaid.
+    """Debt summary: owed, postpaid, past orders, total, repaid, remaining.
 
     The executor also sees the breakdown between items and past-orders debt;
-    the customer only sees the total.
+    the customer only sees the total. Blocks are separated by a blank line so
+    the accrual side (what is owed for goods) reads apart from the running
+    balance (what is left after repayments).
     """
-    lines = []
+    head = []
     if for_executor:
-        lines.append(
+        head.append(
             f"💰 Долг по товарам: {_money(balance.debt_kop)} (предоплата, {balance.debt_count} шт)"
         )
-        lines.append(f"📜 Долги за прошлое: {_signed_money(balance.manual_kop)}")
-        lines.append(f"🧾 Итого долг: {_signed_money(balance.total_kop)}")
     else:
-        lines.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
-    if balance.repaid_count:
-        lines.append(f"💸 Погашено: {_money(balance.repaid_kop)} ({balance.repaid_count} шт)")
-    if balance.advance_kop:
-        lines.append("✅ Остаток: 0,00 BYN")
-        lines.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
-    elif balance.total_kop or balance.repaid_count or balance.debt_count or balance.manual_kop:
-        lines.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
+        head.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
     if debt.postpaid_count:
-        lines.append(f"⏳ Ждет постоплаты: {_money(debt.postpaid_kop)} ({debt.postpaid_count} шт)")
-    return "\n".join(lines)
+        head.append(f"⏳ Ждет постоплаты: {_money(debt.postpaid_kop)} ({debt.postpaid_count} шт)")
+
+    totals = []
+    if for_executor:
+        totals.append(f"🧾 Итого долг: {_signed_money(balance.total_kop)}")
+    if balance.repaid_count:
+        totals.append(f"💸 Погашено: {_money(balance.repaid_kop)} ({balance.repaid_count} шт)")
+    if balance.advance_kop:
+        totals.append("✅ Остаток: 0,00 BYN")
+        totals.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
+    elif balance.total_kop or balance.repaid_count or balance.debt_count or balance.manual_kop:
+        totals.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
+
+    blocks = [head]
+    if for_executor:
+        blocks.append([f"📜 Долги за прошлое: {_signed_money(balance.manual_kop)}"])
+    if totals:
+        blocks.append(totals)
+    return "\n\n".join("\n".join(block) for block in blocks)
 
 
 async def send_debt(

@@ -22,14 +22,19 @@ def _repayment(id_: int, amount: int, *, note: str | None = None, by: int = 9) -
 
 
 def _debt(
-    debt_kop: int, *, debt_count: int = 1, manual_kop: int = 0, postpaid: int = 0
+    debt_kop: int,
+    *,
+    debt_count: int = 1,
+    manual_kop: int = 0,
+    postpaid: int = 0,
+    postpaid_count: int | None = None,
 ) -> CalcDebtResponse:
     return CalcDebtResponse(
         debt_kop=debt_kop,
         debt_count=debt_count,
         manual_kop=manual_kop,
         postpaid_kop=postpaid,
-        postpaid_count=1 if postpaid else 0,
+        postpaid_count=(postpaid_count if postpaid_count is not None else 1) if postpaid else 0,
     )
 
 
@@ -101,6 +106,22 @@ def test_debt_text_overpayment_shows_advance() -> None:
     assert "✅ Остаток: 0,00 BYN" in text
     assert "🎁 Аванс: 500,00 BYN" in text
     assert "-500" not in text
+
+
+def test_debt_text_executor_layout_order() -> None:
+    debt = _debt(50511, debt_count=5, postpaid=14284, postpaid_count=6)
+    balance = _balance(50511, debt_count=5, repaid_kop=50000, repaid_count=2)
+    text = format_debt_text(debt, balance, for_executor=True)
+    assert text == (
+        "💰 Долг по товарам: 505,11 BYN (предоплата, 5 шт)\n"
+        "⏳ Ждет постоплаты: 142,84 BYN (6 шт)\n"
+        "\n"
+        "📜 Долги за прошлое: 0,00 BYN\n"
+        "\n"
+        "🧾 Итого долг: 505,11 BYN\n"
+        "💸 Погашено: 500,00 BYN (2 шт)\n"
+        "✅ Остаток: 5,11 BYN"
+    )
 
 
 def test_debt_text_keeps_postpaid_line() -> None:
