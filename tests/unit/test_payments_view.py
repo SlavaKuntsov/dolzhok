@@ -120,7 +120,26 @@ def test_debt_text_executor_layout_order() -> None:
         "\n"
         "🧾 Итого долг: 505,11 BYN\n"
         "💸 Погашено: 500,00 BYN (2 шт)\n"
+        "\n"
         "✅ Остаток: 5,11 BYN"
+    )
+
+
+def test_debt_text_executor_layout_with_advance() -> None:
+    debt = _debt(72867, debt_count=6, postpaid=16231, postpaid_count=8)
+    balance = _balance(72867, debt_count=6, repaid_kop=75000, repaid_count=3)
+    text = format_debt_text(debt, balance, for_executor=True)
+    assert text == (
+        "💰 Долг по товарам: 728,67 BYN (предоплата, 6 шт)\n"
+        "⏳ Ждет постоплаты: 162,31 BYN (8 шт)\n"
+        "\n"
+        "📜 Долги за прошлое: 0,00 BYN\n"
+        "\n"
+        "🧾 Итого долг: 728,67 BYN\n"
+        "💸 Погашено: 750,00 BYN (3 шт)\n"
+        "\n"
+        "✅ Остаток: 0,00 BYN\n"
+        "🎁 Аванс: 21,33 BYN"
     )
 
 
