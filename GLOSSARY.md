@@ -55,8 +55,8 @@ One of the four `payment type × receipt status` combinations an in-work item ca
 _Avoid_: category, group, segment
 
 **Unpriced work item**:
-An item in work (`ordered`/`received`) that has no price yet. It carries no money and is shown as «⚠️ Без цены» rather than silently dropped from the summary.
-_Avoid_: free item, missing item
+An item in work (`ordered`/`received`) that carries no money — no price yet, or a zero line total. Shown as «⚠️ Без цены» rather than silently dropped from the summary.
+_Avoid_: free item, missing item, zero item
 
 **Manual debt**:
 Money from past orders that were never tracked as items, entered by hand as one running figure. It is signed: negative means the customer overpaid on past debt. It counts in the debt but is not an Item and never appears in the item list.

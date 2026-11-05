@@ -50,8 +50,9 @@ Every in-work item falls into exactly one bucket, so no combination can fall
 between the lines. A received postpaid item counts as debt: the executor paid
 Ozon to collect it. Only an ordered postpaid item is still «Ещё не долг,
 оплачу при получении» — not owed until it arrives, so it does not move the
-balance. An in-work item with no price carries no money and is reported
-separately («⚠️ Без цены») instead of being dropped silently.
+balance. An in-work item that carries no money — no price yet, or a zero
+line total — is reported separately («⚠️ Без цены») instead of being dropped
+silently.
 
 A cancellation after prepayment is not counted as debt; it shows up in `/stats` as «refunds».
 Repayments are a separate cash pool — cancellations do not adjust them automatically.

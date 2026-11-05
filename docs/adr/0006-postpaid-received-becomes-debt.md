@@ -21,7 +21,7 @@ a combination falling between two branches.
 
 - The debt is split by payment type and by receipt, and the summary explains each quantity: «Долг за товары» → «заплатил заранее» (with in-hand vs in-transit counts) and «заплатил при получении», then «Ещё не долг, оплачу при получении». The remaining line carries its own arithmetic (`долг − погашено`).
 - Amounts and counts travel together as a `MoneyCount`, so a line can never print an amount from one bucket with a count from another.
-- In-work items with no price are reported as «⚠️ Без цены» instead of being dropped silently — the same class of gap as the original bug.
+- In-work items that carry no money (no price, or a zero line total) are reported as «⚠️ Без цены» instead of being dropped silently — the same class of gap as the original bug.
 - Pending postpaid stays out of `debt`, so the running balance is unchanged by an order that has not arrived — it only moves when the item is received.
 - The gross «Итого долг» (accrual before repayments) and «Погашено» lines were dropped from the summary: only the work-in-progress split and «Остаток» answer "how much is left". The repayment ledger still lives in «📜 Погашения».
 - ADR-0003 (derived debt) and ADR-0005 (manual past-orders debt) are **amended**: their quoted formulas gained the `POSTPAID + RECEIVED` line. Both decisions otherwise stand — debt is still derived, and manual debt is still one signed figure.
