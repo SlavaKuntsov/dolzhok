@@ -42,7 +42,7 @@ def format_debt_text(balance: CalcBalanceResponse, *, for_executor: bool) -> str
     without a price are called out: dropping them silently is the bug this
     summary exists to prevent.
     """
-    debt = balance.debt
+    debt = balance.items
     head = []
     if for_executor:
         head.append(f"💰 Долг за товары: {_money(debt.debt.amount_kop)}")
@@ -57,7 +57,7 @@ def format_debt_text(balance: CalcBalanceResponse, *, for_executor: bool) -> str
             head.append(
                 f"  • заплатил заранее: {_money(prepaid.amount_kop)} ({prepaid.count} шт: {detail})"
             )
-        postpaid = debt.debt_postpaid
+        postpaid = debt.postpaid_received
         if postpaid.amount_kop:
             head.append(
                 f"  • заплатил при получении: {_money(postpaid.amount_kop)} ({postpaid.count} шт)"
@@ -82,11 +82,13 @@ def format_debt_text(balance: CalcBalanceResponse, *, for_executor: bool) -> str
         remaining.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
     elif balance.total_kop or debt.debt.count or debt.manual_kop:
         remaining.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
-    if remaining and for_executor and (balance.repaid_count or debt.manual_kop):
+    if remaining and for_executor and (balance.repaid.count or debt.manual_kop):
         # Show the subtraction whenever the remaining figure is not just the
         # goods total — repayments and/or the past-orders line are in play.
+        # `total_kop` is signed (manual debt may be negative), so render signed.
         remaining.append(
-            f"   долг {_money(balance.total_kop)} − погашено {_money(balance.repaid_kop)}"
+            f"   долг {_signed_money(balance.total_kop)} "
+            f"− погашено {_money(balance.repaid.amount_kop)}"
         )
 
     blocks = [head]

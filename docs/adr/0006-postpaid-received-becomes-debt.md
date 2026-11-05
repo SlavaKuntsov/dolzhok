@@ -13,9 +13,11 @@ debt              = prepaid_ordered + prepaid_received + postpaid_received
 balance           = debt + manual_debt − Σ repayments
 ```
 
-The four buckets are the full `payment type × receipt status` grid, so the
-classification has no gap by construction — the bug this ADR fixes was exactly
-a combination falling between two branches.
+The four buckets are the full `payment type × receipt status` grid, so every
+in-work item that carries money is classified by construction — the bug this
+ADR fixes was exactly a combination falling between two branches. Items that
+carry no money (no price, or a zero line total) are counted separately as
+unpriced work items rather than dropped.
 
 ## Consequences
 
@@ -23,5 +25,5 @@ a combination falling between two branches.
 - Amounts and counts travel together as a `MoneyCount`, so a line can never print an amount from one bucket with a count from another.
 - In-work items that carry no money (no price, or a zero line total) are reported as «⚠️ Без цены» instead of being dropped silently — the same class of gap as the original bug.
 - Pending postpaid stays out of `debt`, so the running balance is unchanged by an order that has not arrived — it only moves when the item is received.
-- The gross «Итого долг» (accrual before repayments) and «Погашено» lines were dropped from the summary: only the work-in-progress split and «Остаток» answer "how much is left". The repayment ledger still lives in «📜 Погашения».
+- The standalone gross «Итого долг» (accrual before repayments) and «Погашено» lines were dropped from the summary; the subtraction survives only as the one-line explanation under «Остаток». The repayment ledger still lives in «📜 Погашения».
 - ADR-0003 (derived debt) and ADR-0005 (manual past-orders debt) are **amended**: their quoted formulas gained the `POSTPAID + RECEIVED` line. Both decisions otherwise stand — debt is still derived, and manual debt is still one signed figure.
