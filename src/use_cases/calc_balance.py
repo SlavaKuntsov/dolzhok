@@ -5,35 +5,35 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
-from src.use_cases.calc_debt import CalcDebtUseCase
+from src.use_cases.calc_debt import CalcDebtResponse, CalcDebtUseCase
 
 
 @dataclass(frozen=True)
 class CalcBalanceResponse:
-    """Debt side (split by payment type) against the single repayment pool.
+    """Debt side against the single repayment pool; the rest is derived.
 
-    Repayments are folded into `balance_kop`/`advance_kop` only: the summary no
-    longer renders a «Погашено» figure, so the pool's size is not exposed here
-    (the ledger in `ListRepaymentsResponse` still is).
+    Wraps the debt breakdown instead of copying its fields, so the summary can
+    always explain the balance from the same numbers it prints above it.
     """
 
-    debt_prepaid_kop: int
-    debt_prepaid_count: int
-    debt_postpaid_kop: int
-    debt_postpaid_count: int
-    manual_kop: int
-    total_kop: int  # items debt + manual past-orders debt
-    balance_kop: int  # total - repaid; negative means customer overpaid
-    advance_kop: int  # max(0, -balance), shown as "аванс"
+    debt: CalcDebtResponse
+    repaid_kop: int
+    repaid_count: int
 
     @property
-    def debt_kop(self) -> int:
-        """Everything the executor already fronted for items."""
-        return self.debt_prepaid_kop + self.debt_postpaid_kop
+    def total_kop(self) -> int:
+        """Items debt plus the manual past-orders figure."""
+        return self.debt.total_kop
 
     @property
-    def debt_count(self) -> int:
-        return self.debt_prepaid_count + self.debt_postpaid_count
+    def balance_kop(self) -> int:
+        """Total minus repayments; negative means the customer overpaid."""
+        return self.total_kop - self.repaid_kop
+
+    @property
+    def advance_kop(self) -> int:
+        """max(0, -balance), shown as "аванс"."""
+        return max(0, -self.balance_kop)
 
 
 class CalcBalanceUseCase:
@@ -52,16 +52,8 @@ class CalcBalanceUseCase:
     async def execute(self) -> CalcBalanceResponse:
         debt = await CalcDebtUseCase(self._items, self._manual).execute()
         repayments = await self._repayments.list_all()
-        repaid_kop = sum(r.amount_kop for r in repayments)
-        total_kop = debt.total_kop
-        balance_kop = total_kop - repaid_kop
         return CalcBalanceResponse(
-            debt_prepaid_kop=debt.debt_prepaid_kop,
-            debt_prepaid_count=debt.debt_prepaid_count,
-            debt_postpaid_kop=debt.debt_postpaid_kop,
-            debt_postpaid_count=debt.debt_postpaid_count,
-            manual_kop=debt.manual_kop,
-            total_kop=total_kop,
-            balance_kop=balance_kop,
-            advance_kop=max(0, -balance_kop),
+            debt=debt,
+            repaid_kop=sum(r.amount_kop for r in repayments),
+            repaid_count=len(repayments),
         )

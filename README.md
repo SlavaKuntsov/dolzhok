@@ -27,7 +27,7 @@ Token: `@BotFather` → `/newbot`. User IDs: `@userinfobot`.
 |---|---|---|
 | `/start` | anyone in the whitelist | greeting + role |
 | `/list` | both | filterable, paged row list of Items; tap a row for its card (executor gets control buttons) |
-| `/debt` | both | «Уже оплачено за товары» split into prepaid/postpaid + «Долги за прошлое» (executor) + «Будет оплачено при получении» + «Остаток» (and «Аванс» on overpayment) |
+| `/debt` | both | «Долг за товары» split into «заплатил заранее» (with in-hand vs in-transit counts) and «заплатил при получении» + «Долги за прошлое» (executor) + «Ещё не долг, оплачу при получении» + «Остаток» with the arithmetic (and «Аванс» on overpayment) |
 | `/stats` | both | ordered/received/cancelled/refunds |
 | `/pay` | executor | record a repayment (FSM: amount → optional comment) |
 | `/payments` | both | repayment ledger (executor gets 🗑 with confirmation) |
@@ -37,15 +37,21 @@ Inline buttons under a card exist only for the executor (the customer sees a car
 ## Debt formula
 
 ```
-debt_prepaid  = Σ (price × qty) WHERE payment = PREPAID  AND status IN (ORDERED, RECEIVED)
-debt_postpaid = Σ (price × qty) WHERE payment = POSTPAID AND status = RECEIVED
+buckets       = payment type × receipt status, one per in-work item (no gap)
+debt_prepaid  = prepaid_ordered + prepaid_received
+debt_postpaid = postpaid_received
 debt          = debt_prepaid + debt_postpaid
-pending       = Σ (price × qty) WHERE payment = POSTPAID AND status = ORDERED
+pending       = postpaid_ordered
 manual_debt   = signed past-orders figure (may be negative)
 balance       = debt + manual_debt − Σ repayment.amount_kop   # < 0 → «advance» (overpayment)
 ```
 
-A received postpaid item counts as debt: the executor paid Ozon to collect it. Only an ordered postpaid item is still «Будет оплачено при получении» — not owed until it arrives, so it does not move the balance.
+Every in-work item falls into exactly one bucket, so no combination can fall
+between the lines. A received postpaid item counts as debt: the executor paid
+Ozon to collect it. Only an ordered postpaid item is still «Ещё не долг,
+оплачу при получении» — not owed until it arrives, so it does not move the
+balance. An in-work item with no price carries no money and is reported
+separately («⚠️ Без цены») instead of being dropped silently.
 
 A cancellation after prepayment is not counted as debt; it shows up in `/stats` as «refunds».
 Repayments are a separate cash pool — cancellations do not adjust them automatically.

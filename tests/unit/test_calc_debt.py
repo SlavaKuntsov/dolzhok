@@ -56,8 +56,8 @@ async def test_postpaid_ordered_is_pending_not_debt() -> None:
     await _add(repo, price=70000, status=ItemStatus.ORDERED, payment=PaymentType.POSTPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
     assert summary.debt_kop == 0
-    assert summary.pending_kop == 70000
-    assert summary.pending_count == 1
+    assert summary.pending.amount_kop == 70000
+    assert summary.pending.count == 1
 
 
 async def test_postpaid_received_is_debt() -> None:
@@ -71,16 +71,36 @@ async def test_postpaid_received_is_debt() -> None:
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
     assert summary.debt_kop == 70000
     assert summary.debt_count == 1
-    assert summary.pending_kop == 0
-    assert summary.pending_count == 0
+    assert summary.pending.amount_kop == 0
+    assert summary.pending.count == 0
 
 
-async def test_items_without_price_are_skipped() -> None:
+async def test_items_without_price_are_skipped_but_counted() -> None:
+    """An unpriced in-work item carries no money, but must not vanish silently."""
     repo = InMemoryItemRepository()
     await _add(repo, price=None, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
     assert summary.debt_kop == 0
     assert summary.debt_count == 0
+    assert summary.unpriced_count == 1
+
+
+async def test_every_in_work_item_lands_in_exactly_one_bucket() -> None:
+    """The classification has no gap: all four payment×status combinations."""
+    repo = InMemoryItemRepository()
+    await _add(repo, price=100, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
+    await _add(repo, price=200, status=ItemStatus.RECEIVED, payment=PaymentType.PREPAID)
+    await _add(repo, price=400, status=ItemStatus.RECEIVED, payment=PaymentType.POSTPAID)
+    await _add(repo, price=800, status=ItemStatus.ORDERED, payment=PaymentType.POSTPAID)
+    summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
+    assert summary.prepaid_ordered.amount_kop == 100
+    assert summary.prepaid_received.amount_kop == 200
+    assert summary.postpaid_received.amount_kop == 400
+    assert summary.postpaid_ordered.amount_kop == 800
+    assert summary.debt.count == 3
+    assert summary.pending.count == 1
+    # Every item that carries money is in some bucket; nothing is dropped.
+    assert summary.debt.count + summary.pending.count == 4
 
 
 async def test_manual_debt_adds_to_total() -> None:
