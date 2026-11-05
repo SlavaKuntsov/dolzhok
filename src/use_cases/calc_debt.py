@@ -13,11 +13,29 @@ WORK_STATUSES: frozenset[ItemStatus] = frozenset({ItemStatus.ORDERED, ItemStatus
 
 @dataclass(frozen=True)
 class CalcDebtResponse:
-    debt_kop: int
-    debt_count: int
+    """Item-side money split by how it is (or will be) settled.
+
+    `debt_*` is what the executor already fronted and the customer therefore
+    owes: every prepaid item in work plus every postpaid item that was received.
+    `pending_*` is postpaid and still on its way — not owed until it arrives.
+    """
+
+    debt_prepaid_kop: int
+    debt_prepaid_count: int
+    debt_postpaid_kop: int
+    debt_postpaid_count: int
+    pending_kop: int
+    pending_count: int
     manual_kop: int
-    postpaid_kop: int
-    postpaid_count: int
+
+    @property
+    def debt_kop(self) -> int:
+        """Everything the executor already paid for."""
+        return self.debt_prepaid_kop + self.debt_postpaid_kop
+
+    @property
+    def debt_count(self) -> int:
+        return self.debt_prepaid_count + self.debt_postpaid_count
 
     @property
     def total_kop(self) -> int:
@@ -26,9 +44,12 @@ class CalcDebtResponse:
 
 
 class CalcDebtUseCase:
-    """Prepaid in-work items are customer's debt; postpaid ordered items are pending.
+    """Debt is what the executor already fronted; pending postpaid is not debt.
 
-    The past-orders figure is added on top and may be negative (overpayment).
+    A postpaid item becomes debt the moment it is received (the executor paid
+    Ozon to collect it), which is why RECEIVED+POSTPAID counts here. Only an
+    ordered-and-postpaid item is still pending. The past-orders figure is added
+    on top and may be negative (overpayment).
     """
 
     def __init__(self, repo: IItemRepository, manual_repo: IManualDebtRepository) -> None:
@@ -36,22 +57,29 @@ class CalcDebtUseCase:
         self._manual = manual_repo
 
     async def execute(self) -> CalcDebtResponse:
-        debt_kop = debt_count = postpaid_kop = postpaid_count = 0
+        debt_prepaid_kop = debt_prepaid_count = 0
+        debt_postpaid_kop = debt_postpaid_count = 0
+        pending_kop = pending_count = 0
         for item in await self._repo.list_all():
             total = item.total_kop
-            if total is None:
+            if total is None or item.status not in WORK_STATUSES:
                 continue
-            if item.status in WORK_STATUSES and item.payment is PaymentType.PREPAID:
-                debt_kop += total
-                debt_count += 1
-            elif item.status is ItemStatus.ORDERED and item.payment is PaymentType.POSTPAID:
-                postpaid_kop += total
-                postpaid_count += 1
+            if item.payment is PaymentType.PREPAID:
+                debt_prepaid_kop += total
+                debt_prepaid_count += 1
+            elif item.status is ItemStatus.RECEIVED:
+                debt_postpaid_kop += total
+                debt_postpaid_count += 1
+            else:
+                pending_kop += total
+                pending_count += 1
         manual = await self._manual.get()
         return CalcDebtResponse(
-            debt_kop=debt_kop,
-            debt_count=debt_count,
+            debt_prepaid_kop=debt_prepaid_kop,
+            debt_prepaid_count=debt_prepaid_count,
+            debt_postpaid_kop=debt_postpaid_kop,
+            debt_postpaid_count=debt_postpaid_count,
+            pending_kop=pending_kop,
+            pending_count=pending_count,
             manual_kop=manual.amount_kop,
-            postpaid_kop=postpaid_kop,
-            postpaid_count=postpaid_count,
         )

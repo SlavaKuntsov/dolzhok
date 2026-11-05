@@ -47,7 +47,7 @@ A non-negative amount held in kopecks (minor units), displayed as roubles like `
 _Avoid_: amount, value, price
 
 **Debt**:
-Money the customer owes the executor: prepaid items still in work (ordered or received) plus the manual debt. Shown as «Долг» to the customer and broken down as «Долг по товарам» + «Долги за прошлое» to the executor.
+Money the customer owes the executor: items the executor already fronted (every prepaid item in work, plus every postpaid item that was received) plus the manual debt. Shown as «Долг» to the customer and split into «Уже оплачено за товары» + «Долги за прошлое» to the executor.
 _Avoid_: total, amount owed, balance, sum
 
 **Manual debt**:
@@ -55,7 +55,7 @@ Money from past orders that were never tracked as items, entered by hand as one 
 _Avoid_: item, old order, extra debt, adjustment
 
 **Pending postpaid**:
-Postpaid ordered items the customer has not paid for yet. Explicitly not part of the debt. Shown as «Ждет постоплаты».
+A postpaid item that is ordered but not received yet — the customer will pay on receipt. Explicitly not part of the debt until it arrives. Shown as «Будет оплачено при получении».
 _Avoid_: debt, unpaid, outstanding
 
 **Repayment**:

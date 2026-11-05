@@ -27,7 +27,7 @@ Token: `@BotFather` → `/newbot`. User IDs: `@userinfobot`.
 |---|---|---|
 | `/start` | anyone in the whitelist | greeting + role |
 | `/list` | both | filterable, paged row list of Items; tap a row for its card (executor gets control buttons) |
-| `/debt` | both | «Customer owes: X BYN» + «Repaid»/«Balance» (and «Advance» on overpayment) + pending postpaid |
+| `/debt` | both | «Уже оплачено за товары» split into prepaid/postpaid (executor) + «Будет оплачено при получении» + «Остаток» (and «Аванс» on overpayment) |
 | `/stats` | both | ordered/received/cancelled/refunds |
 | `/pay` | executor | record a repayment (FSM: amount → optional comment) |
 | `/payments` | both | repayment ledger (executor gets 🗑 with confirmation) |
@@ -37,12 +37,15 @@ Inline buttons under a card exist only for the executor (the customer sees a car
 ## Debt formula
 
 ```
-debt        = Σ (price × qty) WHERE status IN (ORDERED, RECEIVED) AND payment = PREPAID
-            + manual_debt             # signed past-orders figure (may be negative)
-postpaid    = Σ (price × qty) WHERE status = ORDERED AND payment = POSTPAID
-repaid      = Σ repayment.amount_kop
-balance     = debt − repaid            # < 0 → «advance» (overpayment)
+debt_prepaid  = Σ (price × qty) WHERE payment = PREPAID  AND status IN (ORDERED, RECEIVED)
+debt_postpaid = Σ (price × qty) WHERE payment = POSTPAID AND status = RECEIVED
+debt          = debt_prepaid + debt_postpaid
+pending       = Σ (price × qty) WHERE payment = POSTPAID AND status = ORDERED
+manual_debt   = signed past-orders figure (may be negative)
+balance       = debt + manual_debt − Σ repayment.amount_kop   # < 0 → «advance» (overpayment)
 ```
+
+A received postpaid item counts as debt: the executor paid Ozon to collect it. Only an ordered postpaid item is still «Будет оплачено при получении» — not owed until it arrives, so it does not move the balance.
 
 A cancellation after prepayment is not counted as debt; it shows up in `/stats` as «refunds».
 Repayments are a separate cash pool — cancellations do not adjust them automatically.
