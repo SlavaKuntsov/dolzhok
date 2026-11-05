@@ -103,6 +103,25 @@ async def test_every_in_work_item_lands_in_exactly_one_bucket() -> None:
     assert summary.debt.count + summary.pending.count == 4
 
 
+async def test_buckets_account_for_every_in_work_item() -> None:
+    """Bucketed + unpriced == all in-work items; cancelled and new stay out.
+
+    This is the invariant behind the original bug: a combination that matched
+    no branch silently left the report.
+    """
+    repo = InMemoryItemRepository()
+    await _add(repo, price=100, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
+    await _add(repo, price=200, status=ItemStatus.RECEIVED, payment=PaymentType.POSTPAID)
+    await _add(repo, price=None, status=ItemStatus.RECEIVED, payment=PaymentType.PREPAID)
+    await _add(repo, price=999, status=ItemStatus.CANCELLED, payment=PaymentType.PREPAID)
+    await _add(repo, price=888, status=ItemStatus.NEW, payment=PaymentType.PREPAID)
+    summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
+    assert summary.debt.count + summary.pending.count == 2
+    assert summary.unpriced_count == 1
+    # 2 bucketed + 1 unpriced = the 3 in-work items; cancelled/new excluded.
+    assert summary.debt.count + summary.pending.count + summary.unpriced_count == 3
+
+
 async def test_manual_debt_adds_to_total() -> None:
     repo = InMemoryItemRepository()
     manual = InMemoryManualDebtRepository(amount_kop=50000)
