@@ -26,12 +26,13 @@ class MoneyCount:
 class CalcDebtResponse:
     """Item-side money as the four atomic buckets the summary renders.
 
-    Buckets are `(payment type × receipt status)` so every in-work item lands in
-    exactly one of them — the classification has no gap. Derived views:
-    `debt` is what the executor already fronted (anything prepaid, plus postpaid
-    that arrived), `pending` is postpaid still on its way and therefore not owed.
-    `unpriced_count` counts in-work items with no price: they carry no money and
-    are surfaced separately instead of being dropped silently.
+    Buckets are `(payment type × receipt status)` so every in-work item that
+    carries money lands in exactly one of them — the classification has no gap.
+    Derived views: `debt` is what the executor already fronted (anything
+    prepaid, plus postpaid that arrived), `pending` is postpaid still on its way
+    and therefore not owed. `unpriced_count` counts in-work items that carry no
+    money — no price, or a zero line total — because those are surfaced
+    separately instead of being dropped silently.
     """
 
     prepaid_ordered: MoneyCount = MoneyCount()
@@ -57,14 +58,6 @@ class CalcDebtResponse:
     @property
     def pending(self) -> MoneyCount:
         return self.postpaid_ordered
-
-    @property
-    def debt_kop(self) -> int:
-        return self.debt.amount_kop
-
-    @property
-    def debt_count(self) -> int:
-        return self.debt.count
 
     @property
     def total_kop(self) -> int:
@@ -97,7 +90,9 @@ class CalcDebtUseCase:
             if item.status not in WORK_STATUSES:
                 continue
             total = item.total_kop
-            if total is None:
+            if not total:
+                # No price, or a zero line total: the item carries no money, so
+                # it would only ever print as an invisible "0,00 BYN (1 шт)".
                 unpriced_count += 1
                 continue
             key = (item.payment, item.status)

@@ -47,7 +47,7 @@ def format_debt_text(balance: CalcBalanceResponse, *, for_executor: bool) -> str
     if for_executor:
         head.append(f"💰 Долг за товары: {_money(debt.debt.amount_kop)}")
         prepaid = debt.debt_prepaid
-        if prepaid.count:
+        if prepaid.amount_kop:
             detail = _pieces(
                 [
                     ("уже у меня", debt.prepaid_received.count),
@@ -58,7 +58,7 @@ def format_debt_text(balance: CalcBalanceResponse, *, for_executor: bool) -> str
                 f"  • заплатил заранее: {_money(prepaid.amount_kop)} ({prepaid.count} шт: {detail})"
             )
         postpaid = debt.debt_postpaid
-        if postpaid.count:
+        if postpaid.amount_kop:
             head.append(
                 f"  • заплатил при получении: {_money(postpaid.amount_kop)} ({postpaid.count} шт)"
             )
@@ -82,7 +82,9 @@ def format_debt_text(balance: CalcBalanceResponse, *, for_executor: bool) -> str
         remaining.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
     elif balance.total_kop or debt.debt.count or debt.manual_kop:
         remaining.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
-    if remaining and for_executor and balance.repaid_count:
+    if remaining and for_executor and (balance.repaid_count or debt.manual_kop):
+        # Show the subtraction whenever the remaining figure is not just the
+        # goods total — repayments and/or the past-orders line are in play.
         remaining.append(
             f"   долг {_money(balance.total_kop)} − погашено {_money(balance.repaid_kop)}"
         )

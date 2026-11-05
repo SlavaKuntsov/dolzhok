@@ -125,7 +125,7 @@ async def test_balance_partial_payment() -> None:
     await _add_item(items, price=259900)
     await _pay(repayments, 100000)
     balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
-    assert balance.debt.debt_kop == 259900
+    assert balance.debt.debt.amount_kop == 259900
     assert balance.balance_kop == 159900
     assert balance.advance_kop == 0
 
@@ -157,8 +157,8 @@ async def test_balance_counts_and_qty() -> None:
     await _pay(repayments, 100000)
     await _pay(repayments, 50000)
     balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
-    assert balance.debt.debt_kop == 259900
-    assert balance.debt.debt_count == 1
+    assert balance.debt.debt.amount_kop == 259900
+    assert balance.debt.debt.count == 1
 
 
 async def test_balance_grows_when_postpaid_item_is_received() -> None:
@@ -173,7 +173,7 @@ async def test_balance_grows_when_postpaid_item_is_received() -> None:
     )
     manual = InMemoryManualDebtRepository()
     before = await CalcBalanceUseCase(items, repayments, manual).execute()
-    assert before.debt.debt_kop == 0
+    assert before.debt.debt.amount_kop == 0
     assert before.balance_kop == 0
 
     item = (await items.list_all())[0]
@@ -181,7 +181,7 @@ async def test_balance_grows_when_postpaid_item_is_received() -> None:
     await items.update(item)
 
     after = await CalcBalanceUseCase(items, repayments, manual).execute()
-    assert after.debt.debt_kop == 1812
+    assert after.debt.debt.amount_kop == 1812
     assert after.debt.debt_postpaid.amount_kop == 1812
     assert after.debt.debt_postpaid.count == 1
     assert after.balance_kop == 1812
@@ -193,6 +193,6 @@ async def test_balance_skips_items_without_price() -> None:
     await _add_item(items, price=None)
     await _pay(repayments, 100000)
     balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
-    assert balance.debt.debt_kop == 0
+    assert balance.debt.debt.amount_kop == 0
     assert balance.balance_kop == -100000
     assert balance.advance_kop == 100000

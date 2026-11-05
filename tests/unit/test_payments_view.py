@@ -51,12 +51,12 @@ def _balance(
     debt: CalcDebtResponse | None = None,
     *,
     repaid_kop: int = 0,
-    repaid_count: int = 1 if False else 0,
+    repaid_count: int = 0,
 ) -> CalcBalanceResponse:
     return CalcBalanceResponse(
         debt=debt or _debt(),
         repaid_kop=repaid_kop,
-        repaid_count=repaid_count if repaid_kop else 0,
+        repaid_count=repaid_count,
     )
 
 
@@ -108,6 +108,39 @@ def test_debt_text_flags_unpriced_work_items() -> None:
     debt = _debt(prepaid_received=100000, unpriced_count=2)
     text = format_debt_text(_balance(debt), for_executor=True)
     assert "⚠️ Без цены: 2 шт — в долг не входят" in text
+
+
+def test_debt_text_explains_manual_debt_arithmetic() -> None:
+    """Story 3: the remaining line is explained even with no repayments."""
+    debt = _debt(prepaid_received=100000, manual_kop=50000)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "✅ Остаток: 1 500,00 BYN" in text
+    assert "долг 1 500,00 BYN − погашено 0,00 BYN" in text
+
+
+def test_debt_text_customer_full_text() -> None:
+    """Story 5: the customer's whole summary, not just fragments."""
+    debt = _debt(prepaid_received=100000, postpaid_received=50000, manual_kop=50000)
+    text = format_debt_text(_balance(debt, repaid_kop=20000, repaid_count=1), for_executor=False)
+    assert text == ("💰 Долг: 2 000,00 BYN\n\n✅ Остаток: 1 800,00 BYN")
+
+
+def test_debt_text_zero_amount_bucket_is_not_invisible() -> None:
+    """A zero line total must not print a header without a reconciling bullet.
+
+    A price=0 item used to become MoneyCount(0, 1): the header printed
+    «0,00 BYN» while the bucket bullet was gated on count and the pending block
+    on amount, so no line explained the item.
+    """
+    debt = _debt(postpaid_ordered=0, postpaid_ordered_count=1)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "0,00 BYN (1 шт)" not in text
+    assert "оплачу при получении" not in text
+
+
+def test_money_count_addition_keeps_amount_with_count() -> None:
+    """Story 6: amount and count can never drift apart."""
+    assert MoneyCount(100, 1) + MoneyCount(250, 2) == MoneyCount(350, 3)
 
 
 def test_debt_text_omits_zero_lines() -> None:

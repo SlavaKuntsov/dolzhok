@@ -32,30 +32,30 @@ async def test_debt_prepaid_in_work_only() -> None:
     await _add(repo, price=100000, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
     await _add(repo, price=50000, status=ItemStatus.RECEIVED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 150000
-    assert summary.debt_count == 2
+    assert summary.debt.amount_kop == 150000
+    assert summary.debt.count == 2
 
 
 async def test_debt_times_qty() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=129950, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID, qty=2)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 259900
+    assert summary.debt.amount_kop == 259900
 
 
 async def test_cancelled_prepaid_is_not_debt() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=100000, status=ItemStatus.CANCELLED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 0
-    assert summary.debt_count == 0
+    assert summary.debt.amount_kop == 0
+    assert summary.debt.count == 0
 
 
 async def test_postpaid_ordered_is_pending_not_debt() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=70000, status=ItemStatus.ORDERED, payment=PaymentType.POSTPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 0
+    assert summary.debt.amount_kop == 0
     assert summary.pending.amount_kop == 70000
     assert summary.pending.count == 1
 
@@ -69,8 +69,8 @@ async def test_postpaid_received_is_debt() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=70000, status=ItemStatus.RECEIVED, payment=PaymentType.POSTPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 70000
-    assert summary.debt_count == 1
+    assert summary.debt.amount_kop == 70000
+    assert summary.debt.count == 1
     assert summary.pending.amount_kop == 0
     assert summary.pending.count == 0
 
@@ -80,8 +80,8 @@ async def test_items_without_price_are_skipped_but_counted() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=None, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 0
-    assert summary.debt_count == 0
+    assert summary.debt.amount_kop == 0
+    assert summary.debt.count == 0
     assert summary.unpriced_count == 1
 
 
@@ -127,7 +127,7 @@ async def test_manual_debt_adds_to_total() -> None:
     manual = InMemoryManualDebtRepository(amount_kop=50000)
     await _add(repo, price=100000, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, manual).execute()
-    assert summary.debt_kop == 100000
+    assert summary.debt.amount_kop == 100000
     assert summary.manual_kop == 50000
     assert summary.total_kop == 150000
 
