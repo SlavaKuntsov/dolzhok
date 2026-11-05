@@ -27,7 +27,7 @@ Token: `@BotFather` → `/newbot`. User IDs: `@userinfobot`.
 |---|---|---|
 | `/start` | anyone in the whitelist | greeting + role |
 | `/list` | both | filterable, paged row list of Items; tap a row for its card (executor gets control buttons) |
-| `/debt` | both | «Уже оплачено за товары» split into prepaid/postpaid (executor) + «Будет оплачено при получении» + «Остаток» (and «Аванс» on overpayment) |
+| `/debt` | both | «Уже оплачено за товары» split into prepaid/postpaid + «Долги за прошлое» (executor) + «Будет оплачено при получении» + «Остаток» (and «Аванс» on overpayment) |
 | `/stats` | both | ordered/received/cancelled/refunds |
 | `/pay` | executor | record a repayment (FSM: amount → optional comment) |
 | `/payments` | both | repayment ledger (executor gets 🗑 with confirmation) |

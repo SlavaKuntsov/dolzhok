@@ -55,7 +55,7 @@ def format_debt_text(
         paid.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
 
     pending = []
-    if debt.pending_count:
+    if debt.pending_kop:
         pending.append(
             f"⏳ Будет оплачено при получении: {_money(debt.pending_kop)} ({debt.pending_count} шт)"
         )

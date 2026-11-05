@@ -194,6 +194,14 @@ def test_debt_text_pending_only_still_shows_pending() -> None:
     assert "Остаток" not in text
 
 
+def test_debt_text_omits_zero_priced_pending_line() -> None:
+    """A zero-priced pending item prints no line — zero sums stay out (story 8)."""
+    debt = _debt(pending=0, pending_count=1)
+    balance = _balance()
+    text = format_debt_text(debt, balance, for_executor=True)
+    assert "Будет оплачено" not in text
+
+
 def _response(*repayments: Repayment) -> ListRepaymentsResponse:
     return ListRepaymentsResponse(
         repayments=list(repayments),
