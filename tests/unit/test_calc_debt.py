@@ -56,16 +56,23 @@ async def test_postpaid_ordered_is_pending_not_debt() -> None:
     await _add(repo, price=70000, status=ItemStatus.ORDERED, payment=PaymentType.POSTPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
     assert summary.debt_kop == 0
-    assert summary.postpaid_kop == 70000
-    assert summary.postpaid_count == 1
+    assert summary.pending_kop == 70000
+    assert summary.pending_count == 1
 
 
-async def test_postpaid_received_is_settled() -> None:
+async def test_postpaid_received_is_debt() -> None:
+    """Receiving a postpaid item means the executor fronted the money: it is debt.
+
+    Regression: RECEIVED+POSTPAID used to match neither branch, so the amount
+    silently vanished from both the debt and the pending-postpaid figure.
+    """
     repo = InMemoryItemRepository()
     await _add(repo, price=70000, status=ItemStatus.RECEIVED, payment=PaymentType.POSTPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 0
-    assert summary.postpaid_kop == 0
+    assert summary.debt_kop == 70000
+    assert summary.debt_count == 1
+    assert summary.pending_kop == 0
+    assert summary.pending_count == 0
 
 
 async def test_items_without_price_are_skipped() -> None:

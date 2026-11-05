@@ -136,13 +136,13 @@ async def test_debt_submenu_flow() -> None:
             BTN_MANUAL_RESET,
             BTN_BACK,
         ]
-        assert "Долг по товарам" in session.calls[-1].text
+        assert "Уже оплачено за товары" in session.calls[-1].text
         assert "Долги за прошлое" in session.calls[-1].text
 
         await _feed(dispatcher, bot, session, CUSTOMER_ID, BTN_DEBTS)
         assert _labels(session) == [BTN_DEBT, BTN_PAYMENTS, BTN_BACK]
         assert "💰 Долг: 0,00 BYN" in session.calls[-1].text
-        assert "Долг по товарам" not in session.calls[-1].text
+        assert "Уже оплачено" not in session.calls[-1].text
 
         # «💰 Долг» keeps the user in the submenu.
         await _feed(dispatcher, bot, session, CUSTOMER_ID, BTN_DEBT)

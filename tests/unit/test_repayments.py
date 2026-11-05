@@ -126,7 +126,6 @@ async def test_balance_partial_payment() -> None:
     await _pay(repayments, 100000)
     balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert balance.debt_kop == 259900
-    assert balance.repaid_kop == 100000
     assert balance.balance_kop == 159900
     assert balance.advance_kop == 0
 
@@ -160,7 +159,32 @@ async def test_balance_counts_and_qty() -> None:
     balance = await CalcBalanceUseCase(items, repayments, InMemoryManualDebtRepository()).execute()
     assert balance.debt_kop == 259900
     assert balance.debt_count == 1
-    assert balance.repaid_count == 2
+
+
+async def test_balance_grows_when_postpaid_item_is_received() -> None:
+    """Receiving a postpaid item moves the remaining balance (the reported bug)."""
+    items = InMemoryItemRepository()
+    repayments = InMemoryRepaymentRepository()
+    await _add_item(
+        items,
+        price=1812,
+        status=ItemStatus.ORDERED,
+        payment=PaymentType.POSTPAID,
+    )
+    manual = InMemoryManualDebtRepository()
+    before = await CalcBalanceUseCase(items, repayments, manual).execute()
+    assert before.debt_kop == 0
+    assert before.balance_kop == 0
+
+    item = (await items.list_all())[0]
+    item.transition(ItemStatus.RECEIVED)
+    await items.update(item)
+
+    after = await CalcBalanceUseCase(items, repayments, manual).execute()
+    assert after.debt_kop == 1812
+    assert after.debt_postpaid_kop == 1812
+    assert after.debt_postpaid_count == 1
+    assert after.balance_kop == 1812
 
 
 async def test_balance_skips_items_without_price() -> None:

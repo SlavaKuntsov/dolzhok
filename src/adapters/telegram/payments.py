@@ -30,40 +30,47 @@ def _signed_money(kop: int) -> str:
 def format_debt_text(
     debt: CalcDebtResponse, balance: CalcBalanceResponse, *, for_executor: bool
 ) -> str:
-    """Debt summary: owed, postpaid, past orders, total, repaid, remaining.
+    """Debt summary: what is already paid (by payment type), pending, and the rest.
 
-    The executor also sees the breakdown between items and past-orders debt;
-    the customer only sees the total. Blocks are separated by a blank line so
-    the accrual side (what is owed for goods) reads apart from the running
-    balance (what is left after repayments).
+    Only work-in-progress money is shown, split by how it settles: the executor
+    sees what they already fronted (debt) broken down into prepaid and received
+    postpaid, plus what is still on its way (pending postpaid, not owed yet).
+    The gross accrual and the repaid ledger are deliberately absent — the
+    running balance is the only total that answers "how much is left".
     """
-    head = []
+    paid = []
     if for_executor:
-        head.append(
-            f"💰 Долг по товарам: {_money(balance.debt_kop)} (предоплата, {balance.debt_count} шт)"
-        )
+        paid.append(f"💰 Уже оплачено за товары: {_money(balance.debt_kop)}")
+        if balance.debt_prepaid_kop:
+            paid.append(
+                f"  • предоплата: {_money(balance.debt_prepaid_kop)} "
+                f"({balance.debt_prepaid_count} шт)"
+            )
+        if balance.debt_postpaid_kop:
+            paid.append(
+                f"  • постоплата: {_money(balance.debt_postpaid_kop)} "
+                f"({balance.debt_postpaid_count} шт)"
+            )
     else:
-        head.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
-    if debt.postpaid_count:
-        head.append(f"⏳ Ждет постоплаты: {_money(debt.postpaid_kop)} ({debt.postpaid_count} шт)")
+        paid.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
 
-    totals = []
-    if for_executor:
-        totals.append(f"🧾 Итого долг: {_signed_money(balance.total_kop)}")
-    if balance.repaid_count:
-        totals.append(f"💸 Погашено: {_money(balance.repaid_kop)} ({balance.repaid_count} шт)")
+    pending = []
+    if debt.pending_kop:
+        pending.append(
+            f"⏳ Будет оплачено при получении: {_money(debt.pending_kop)} ({debt.pending_count} шт)"
+        )
 
     remaining = []
     if balance.advance_kop:
         remaining.append("✅ Остаток: 0,00 BYN")
         remaining.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
-    elif balance.total_kop or balance.repaid_count or balance.debt_count or balance.manual_kop:
+    elif balance.total_kop or balance.debt_count or balance.manual_kop:
         remaining.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
 
-    blocks = [head]
+    blocks = [paid]
     if for_executor:
         blocks.append([f"📜 Долги за прошлое: {_signed_money(balance.manual_kop)}"])
-    blocks += [block for block in (totals, remaining) if block]
+    blocks += [block for block in (pending, remaining) if block]
     return "\n\n".join("\n".join(block) for block in blocks)
 
 
