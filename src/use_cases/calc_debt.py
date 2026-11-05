@@ -21,10 +21,6 @@ class MoneyCount:
     def __add__(self, other: MoneyCount) -> MoneyCount:
         return MoneyCount(self.amount_kop + other.amount_kop, self.count + other.count)
 
-    @property
-    def is_empty(self) -> bool:
-        return self.amount_kop == 0
-
 
 @dataclass(frozen=True)
 class CalcDebtResponse:
