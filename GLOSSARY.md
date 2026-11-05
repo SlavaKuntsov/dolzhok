@@ -51,7 +51,7 @@ Money the customer owes the executor: items the executor already fronted (every 
 _Avoid_: total, amount owed, balance, sum
 
 **Debt bucket**:
-One of the four `payment type × receipt status` combinations an in-work item can fall into (`prepaid_ordered`, `prepaid_received`, `postpaid_received`, `postpaid_ordered`). Every in-work item lands in exactly one, so no combination can drop out of the summary.
+One of the four `payment type × receipt status` combinations an in-work item can fall into (`prepaid_ordered`, `prepaid_received`, `postpaid_received`, `postpaid_ordered`). Every in-work item that carries money lands in exactly one; items that carry none are counted as unpriced work items instead. No combination can drop out of the summary.
 _Avoid_: category, group, segment
 
 **Unpriced work item**:

@@ -4,14 +4,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from src.adapters.telegram.payments import (
     format_debt_text,
     payments_message,
     repayment_confirm_message,
 )
 from src.domain.entities import Repayment
+from src.domain.errors import DomainError
+from src.domain.value_objects import MoneyCount
 from src.use_cases.calc_balance import CalcBalanceResponse
-from src.use_cases.calc_debt import CalcDebtResponse, MoneyCount
+from src.use_cases.calc_debt import CalcDebtResponse
 from src.use_cases.list_repayments import ListRepaymentsResponse
 
 _WHEN = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
@@ -54,9 +58,8 @@ def _balance(
     repaid_count: int = 0,
 ) -> CalcBalanceResponse:
     return CalcBalanceResponse(
-        debt=debt or _debt(),
-        repaid_kop=repaid_kop,
-        repaid_count=repaid_count,
+        items=debt or _debt(),
+        repaid=MoneyCount(repaid_kop, repaid_count),
     )
 
 
@@ -141,6 +144,24 @@ def test_debt_text_zero_amount_bucket_is_not_invisible() -> None:
 def test_money_count_addition_keeps_amount_with_count() -> None:
     """Story 6: amount and count can never drift apart."""
     assert MoneyCount(100, 1) + MoneyCount(250, 2) == MoneyCount(350, 3)
+
+
+def test_debt_text_negative_manual_debt_does_not_crash() -> None:
+    """Regression: a negative past-orders figure crashed the arithmetic line.
+
+    The line rendered `total_kop` through the unsigned `Money` VO, which raises
+    on a negative amount.
+    """
+    debt = _debt(prepaid_received=100000, manual_kop=-500000)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "📜 Долги за прошлое: -5 000,00 BYN" in text
+    assert "🎁 Аванс: 4 000,00 BYN" in text
+
+
+def test_money_count_rejects_negative() -> None:
+    """The money VO keeps its non-negative invariant (AGENTS.md §3)."""
+    with pytest.raises(DomainError):
+        MoneyCount(-1, 1)
 
 
 def test_debt_text_omits_zero_lines() -> None:

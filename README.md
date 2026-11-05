@@ -37,7 +37,7 @@ Inline buttons under a card exist only for the executor (the customer sees a car
 ## Debt formula
 
 ```
-buckets       = payment type × receipt status, one per in-work item (no gap)
+buckets       = payment type × receipt status, one per in-work item with money
 debt_prepaid  = prepaid_ordered + prepaid_received
 debt_postpaid = postpaid_received
 debt          = debt_prepaid + debt_postpaid
@@ -46,8 +46,8 @@ manual_debt   = signed past-orders figure (may be negative)
 balance       = debt + manual_debt − Σ repayment.amount_kop   # < 0 → «advance» (overpayment)
 ```
 
-Every in-work item falls into exactly one bucket, so no combination can fall
-between the lines. A received postpaid item counts as debt: the executor paid
+Every in-work item that carries money falls into exactly one bucket, so no
+combination can fall between the lines. A received postpaid item counts as debt: the executor paid
 Ozon to collect it. Only an ordered postpaid item is still «Ещё не долг,
 оплачу при получении» — not owed until it arrives, so it does not move the
 balance. An in-work item that carries no money — no price yet, or a zero

@@ -6,20 +6,10 @@ from dataclasses import dataclass
 
 from src.domain.entities import ItemStatus, PaymentType
 from src.domain.interfaces import IItemRepository, IManualDebtRepository
+from src.domain.value_objects import MoneyCount
 
 # Items that still count as money in play (cancelled ones are out).
 WORK_STATUSES: frozenset[ItemStatus] = frozenset({ItemStatus.ORDERED, ItemStatus.RECEIVED})
-
-
-@dataclass(frozen=True)
-class MoneyCount:
-    """An amount in kopecks together with the number of items behind it."""
-
-    amount_kop: int = 0
-    count: int = 0
-
-    def __add__(self, other: MoneyCount) -> MoneyCount:
-        return MoneyCount(self.amount_kop + other.amount_kop, self.count + other.count)
 
 
 @dataclass(frozen=True)
@@ -47,13 +37,9 @@ class CalcDebtResponse:
         return self.prepaid_ordered + self.prepaid_received
 
     @property
-    def debt_postpaid(self) -> MoneyCount:
-        return self.postpaid_received
-
-    @property
     def debt(self) -> MoneyCount:
         """Everything the executor already paid for."""
-        return self.debt_prepaid + self.debt_postpaid
+        return self.debt_prepaid + self.postpaid_received
 
     @property
     def pending(self) -> MoneyCount:
@@ -79,11 +65,10 @@ class CalcDebtUseCase:
         self._manual = manual_repo
 
     async def execute(self) -> CalcDebtResponse:
+        # The full payment×status grid: every combination has a bucket, so no
+        # item can fall between branches (the bug that motivated this shape).
         buckets = {
-            (PaymentType.PREPAID, ItemStatus.ORDERED): MoneyCount(),
-            (PaymentType.PREPAID, ItemStatus.RECEIVED): MoneyCount(),
-            (PaymentType.POSTPAID, ItemStatus.RECEIVED): MoneyCount(),
-            (PaymentType.POSTPAID, ItemStatus.ORDERED): MoneyCount(),
+            (payment, status): MoneyCount() for payment in PaymentType for status in WORK_STATUSES
         }
         unpriced_count = 0
         for item in await self._repo.list_all():

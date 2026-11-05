@@ -26,6 +26,32 @@ class Money:
         return f"{grouped},{kop:02d} BYN"
 
 
+@dataclass(frozen=True)
+class MoneyCount:
+    """A non-negative amount in kopecks together with the number of items behind it.
+
+    Amount and count travel as one unit so a summary line can never pair the
+    total of one group with the size of another. `Money` is exposed via
+    `amount`; the raw field stays `int` kopecks like everywhere else.
+    """
+
+    amount_kop: int = 0
+    count: int = 0
+
+    def __post_init__(self) -> None:
+        if self.amount_kop < 0:
+            raise DomainError("money amount must be non-negative")
+        if self.count < 0:
+            raise DomainError("money count must be non-negative")
+
+    @property
+    def amount(self) -> Money:
+        return Money(self.amount_kop)
+
+    def __add__(self, other: MoneyCount) -> MoneyCount:
+        return MoneyCount(self.amount_kop + other.amount_kop, self.count + other.count)
+
+
 def format_signed_rub(kop: int) -> str:
     """Render a signed amount; `Money` itself forbids negative values."""
     return f"-{Money(-kop).format_rub()}" if kop < 0 else Money(kop).format_rub()
