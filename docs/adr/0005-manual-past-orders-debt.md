@@ -6,9 +6,14 @@ We store one signed `ManualDebt` figure in its own `manual_debts` table (single 
 
 ```
 debt    = Σ (price × qty) WHERE payment = PREPAID AND status IN (ORDERED, RECEIVED)
+        + Σ (price × qty) WHERE payment = POSTPAID AND status = RECEIVED   # ADR-0006
         + manual_debt
 balance = debt − Σ repayments        # < 0 → advance (the customer overpaid)
 ```
+
+Status: amended by [ADR-0006](0006-postpaid-received-becomes-debt.md); the
+postpaid-received line and the pending/`Ждет постоплаты` split are newer than
+this decision.
 
 The executor changes it with an add/subtract delta (`➕ Долг`, negative input subtracts), overwrites it (`✏️ Долг за прошлое`, fixing a typo) or resets it to zero (`🗑 Сбросить долг`, with confirmation). Only the executor sees the actions; the customer only sees the total debt.
 

@@ -17,4 +17,4 @@ balance       = debt + manual_debt − Σ repayments
 - The debt is now split by payment type in the response, and the summary renders it that way: «Уже оплачено за товары» with `предоплата`/`постоплата` bullets, then «Будет оплачено при получении».
 - Pending postpaid stays out of `debt`, so the running balance is unchanged by an order that has not arrived — it only moves when the item is received.
 - The gross «Итого долг» (accrual before repayments) and «Погашено» lines were dropped from the summary: only the work-in-progress split and «Остаток» answer "how much is left". The repayment ledger still lives in «📜 Погашения».
-- ADR-0003 (derived debt) and ADR-0005 (manual past-orders debt) still hold; only the per-status classification changed.
+- ADR-0003 (derived debt) and ADR-0005 (manual past-orders debt) are **amended**: their quoted formulas gained the `POSTPAID + RECEIVED` line. Both decisions otherwise stand — debt is still derived, and manual debt is still one signed figure.

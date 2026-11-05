@@ -10,7 +10,12 @@ from src.use_cases.calc_debt import CalcDebtUseCase
 
 @dataclass(frozen=True)
 class CalcBalanceResponse:
-    """Debt side (split by payment type) against the single repayment pool."""
+    """Debt side (split by payment type) against the single repayment pool.
+
+    Repayments are folded into `balance_kop`/`advance_kop` only: the summary no
+    longer renders a «Погашено» figure, so the pool's size is not exposed here
+    (the ledger in `ListRepaymentsResponse` still is).
+    """
 
     debt_prepaid_kop: int
     debt_prepaid_count: int
@@ -18,8 +23,6 @@ class CalcBalanceResponse:
     debt_postpaid_count: int
     manual_kop: int
     total_kop: int  # items debt + manual past-orders debt
-    repaid_kop: int
-    repaid_count: int
     balance_kop: int  # total - repaid; negative means customer overpaid
     advance_kop: int  # max(0, -balance), shown as "аванс"
 
@@ -59,8 +62,6 @@ class CalcBalanceUseCase:
             debt_postpaid_count=debt.debt_postpaid_count,
             manual_kop=debt.manual_kop,
             total_kop=total_kop,
-            repaid_kop=repaid_kop,
-            repaid_count=len(repayments),
             balance_kop=balance_kop,
             advance_kop=max(0, -balance_kop),
         )

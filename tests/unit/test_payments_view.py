@@ -52,7 +52,6 @@ def _balance(
     postpaid_count: int | None = None,
     manual_kop: int = 0,
     repaid_kop: int = 0,
-    repaid_count: int = 0,
 ) -> CalcBalanceResponse:
     prepaid_count = prepaid_count if prepaid_count is not None else (1 if prepaid else 0)
     postpaid_count = postpaid_count if postpaid_count is not None else (1 if postpaid else 0)
@@ -65,8 +64,6 @@ def _balance(
         debt_postpaid_count=postpaid_count,
         manual_kop=manual_kop,
         total_kop=total,
-        repaid_kop=repaid_kop,
-        repaid_count=repaid_count,
         balance_kop=balance,
         advance_kop=max(0, -balance),
     )
@@ -88,7 +85,6 @@ def test_debt_text_executor_shows_split_and_remaining() -> None:
         postpaid=58764,
         postpaid_count=19,
         repaid_kop=190000,
-        repaid_count=4,
     )
     text = format_debt_text(debt, balance, for_executor=True)
     assert text == (
@@ -107,7 +103,7 @@ def test_debt_text_executor_shows_split_and_remaining() -> None:
 def test_debt_text_drops_redundant_totals() -> None:
     """«Итого долг» (gross accrual) and «Погашено» are no longer shown."""
     debt = _debt(prepaid=259900)
-    balance = _balance(prepaid=259900, repaid_kop=100000, repaid_count=1)
+    balance = _balance(prepaid=259900, repaid_kop=100000)
     text = format_debt_text(debt, balance, for_executor=True)
     assert "Итого долг" not in text
     assert "Погашено" not in text
@@ -155,9 +151,7 @@ def test_debt_text_negative_manual_debt() -> None:
 
 def test_debt_text_customer_sees_total_only() -> None:
     debt = _debt(prepaid=100000, postpaid=50000, manual_kop=50000)
-    balance = _balance(
-        prepaid=100000, postpaid=50000, manual_kop=50000, repaid_kop=20000, repaid_count=1
-    )
+    balance = _balance(prepaid=100000, postpaid=50000, manual_kop=50000, repaid_kop=20000)
     text = format_debt_text(debt, balance, for_executor=False)
     assert "💰 Долг: 2 000,00 BYN" in text
     assert "предоплата" not in text
@@ -168,7 +162,7 @@ def test_debt_text_customer_sees_total_only() -> None:
 
 def test_debt_text_overpayment_shows_advance() -> None:
     debt = _debt(prepaid=100000)
-    balance = _balance(prepaid=100000, repaid_kop=150000, repaid_count=1)
+    balance = _balance(prepaid=100000, repaid_kop=150000)
     text = format_debt_text(debt, balance, for_executor=True)
     assert "✅ Остаток: 0,00 BYN" in text
     assert "🎁 Аванс: 500,00 BYN" in text
@@ -177,7 +171,7 @@ def test_debt_text_overpayment_shows_advance() -> None:
 
 def test_debt_text_executor_layout_with_advance() -> None:
     debt = _debt(prepaid=72867, prepaid_count=6, pending=16231, pending_count=8)
-    balance = _balance(prepaid=72867, prepaid_count=6, repaid_kop=75000, repaid_count=3)
+    balance = _balance(prepaid=72867, prepaid_count=6, repaid_kop=75000)
     text = format_debt_text(debt, balance, for_executor=True)
     assert text == (
         "💰 Уже оплачено за товары: 728,67 BYN\n"

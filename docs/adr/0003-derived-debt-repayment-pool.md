@@ -4,8 +4,12 @@ The outstanding debt is computed from items on every call and never stored as a 
 
 ```
 debt    = Σ (price × qty) WHERE payment = PREPAID AND status IN (ORDERED, RECEIVED)
+        + Σ (price × qty) WHERE payment = POSTPAID AND status = RECEIVED   # ADR-0006
 balance = debt − Σ repayments        # < 0 → advance (the customer overpaid)
 ```
+
+Status: amended by [ADR-0006](0006-postpaid-received-becomes-debt.md), which
+made a received postpaid item count as debt (it used to match no branch).
 
 ## Consequences
 

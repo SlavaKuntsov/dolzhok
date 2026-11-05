@@ -30,7 +30,7 @@ def _signed_money(kop: int) -> str:
 def format_debt_text(
     debt: CalcDebtResponse, balance: CalcBalanceResponse, *, for_executor: bool
 ) -> str:
-    """Debt summary: what is already paid (by method), pending, and the rest.
+    """Debt summary: what is already paid (by payment type), pending, and the rest.
 
     Only work-in-progress money is shown, split by how it settles: the executor
     sees what they already fronted (debt) broken down into prepaid and received
