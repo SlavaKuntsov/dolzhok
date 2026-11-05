@@ -5,16 +5,23 @@
 We decided the semantic instead of patching the symptom: a postpaid item becomes debt the moment it is received, because the executor had to pay Ozon to collect it. Only an `ORDERED` postpaid item is still pending — money not yet owed.
 
 ```
-debt_prepaid  = Σ (price × qty) WHERE payment = PREPAID  AND status IN (ORDERED, RECEIVED)
-debt_postpaid = Σ (price × qty) WHERE payment = POSTPAID AND status = RECEIVED
-pending       = Σ (price × qty) WHERE payment = POSTPAID AND status = ORDERED
-debt          = debt_prepaid + debt_postpaid
-balance       = debt + manual_debt − Σ repayments
+prepaid_ordered   = Σ (price × qty) WHERE PREPAID  AND ORDERED
+prepaid_received  = Σ (price × qty) WHERE PREPAID  AND RECEIVED
+postpaid_received = Σ (price × qty) WHERE POSTPAID AND RECEIVED
+postpaid_ordered  = Σ (price × qty) WHERE POSTPAID AND ORDERED   # pending, not debt
+debt              = prepaid_ordered + prepaid_received + postpaid_received
+balance           = debt + manual_debt − Σ repayments
 ```
+
+The four buckets are the full `payment type × receipt status` grid, so the
+classification has no gap by construction — the bug this ADR fixes was exactly
+a combination falling between two branches.
 
 ## Consequences
 
-- The debt is now split by payment type in the response, and the summary renders it that way: «Уже оплачено за товары» with `предоплата`/`постоплата` bullets, then «Будет оплачено при получении».
+- The debt is split by payment type and by receipt, and the summary explains each quantity: «Долг за товары» → «заплатил заранее» (with in-hand vs in-transit counts) and «заплатил при получении», then «Ещё не долг, оплачу при получении». The remaining line carries its own arithmetic (`долг − погашено`).
+- Amounts and counts travel together as a `MoneyCount`, so a line can never print an amount from one bucket with a count from another.
+- In-work items that carry no money (no price, or a zero line total) are reported as «⚠️ Без цены» instead of being dropped silently — the same class of gap as the original bug.
 - Pending postpaid stays out of `debt`, so the running balance is unchanged by an order that has not arrived — it only moves when the item is received.
 - The gross «Итого долг» (accrual before repayments) and «Погашено» lines were dropped from the summary: only the work-in-progress split and «Остаток» answer "how much is left". The repayment ledger still lives in «📜 Погашения».
 - ADR-0003 (derived debt) and ADR-0005 (manual past-orders debt) are **amended**: their quoted formulas gained the `POSTPAID + RECEIVED` line. Both decisions otherwise stand — debt is still derived, and manual debt is still one signed figure.

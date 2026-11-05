@@ -32,32 +32,32 @@ async def test_debt_prepaid_in_work_only() -> None:
     await _add(repo, price=100000, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
     await _add(repo, price=50000, status=ItemStatus.RECEIVED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 150000
-    assert summary.debt_count == 2
+    assert summary.debt.amount_kop == 150000
+    assert summary.debt.count == 2
 
 
 async def test_debt_times_qty() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=129950, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID, qty=2)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 259900
+    assert summary.debt.amount_kop == 259900
 
 
 async def test_cancelled_prepaid_is_not_debt() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=100000, status=ItemStatus.CANCELLED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 0
-    assert summary.debt_count == 0
+    assert summary.debt.amount_kop == 0
+    assert summary.debt.count == 0
 
 
 async def test_postpaid_ordered_is_pending_not_debt() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=70000, status=ItemStatus.ORDERED, payment=PaymentType.POSTPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 0
-    assert summary.pending_kop == 70000
-    assert summary.pending_count == 1
+    assert summary.debt.amount_kop == 0
+    assert summary.pending.amount_kop == 70000
+    assert summary.pending.count == 1
 
 
 async def test_postpaid_received_is_debt() -> None:
@@ -69,18 +69,57 @@ async def test_postpaid_received_is_debt() -> None:
     repo = InMemoryItemRepository()
     await _add(repo, price=70000, status=ItemStatus.RECEIVED, payment=PaymentType.POSTPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 70000
-    assert summary.debt_count == 1
-    assert summary.pending_kop == 0
-    assert summary.pending_count == 0
+    assert summary.debt.amount_kop == 70000
+    assert summary.debt.count == 1
+    assert summary.pending.amount_kop == 0
+    assert summary.pending.count == 0
 
 
-async def test_items_without_price_are_skipped() -> None:
+async def test_items_without_price_are_skipped_but_counted() -> None:
+    """An unpriced in-work item carries no money, but must not vanish silently."""
     repo = InMemoryItemRepository()
     await _add(repo, price=None, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
-    assert summary.debt_kop == 0
-    assert summary.debt_count == 0
+    assert summary.debt.amount_kop == 0
+    assert summary.debt.count == 0
+    assert summary.unpriced_count == 1
+
+
+async def test_every_in_work_item_lands_in_exactly_one_bucket() -> None:
+    """The classification has no gap: all four payment×status combinations."""
+    repo = InMemoryItemRepository()
+    await _add(repo, price=100, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
+    await _add(repo, price=200, status=ItemStatus.RECEIVED, payment=PaymentType.PREPAID)
+    await _add(repo, price=400, status=ItemStatus.RECEIVED, payment=PaymentType.POSTPAID)
+    await _add(repo, price=800, status=ItemStatus.ORDERED, payment=PaymentType.POSTPAID)
+    summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
+    assert summary.prepaid_ordered.amount_kop == 100
+    assert summary.prepaid_received.amount_kop == 200
+    assert summary.postpaid_received.amount_kop == 400
+    assert summary.postpaid_ordered.amount_kop == 800
+    assert summary.debt.count == 3
+    assert summary.pending.count == 1
+    # Every item that carries money is in some bucket; nothing is dropped.
+    assert summary.debt.count + summary.pending.count == 4
+
+
+async def test_buckets_account_for_every_in_work_item() -> None:
+    """Bucketed + unpriced == all in-work items; cancelled and new stay out.
+
+    This is the invariant behind the original bug: a combination that matched
+    no branch silently left the report.
+    """
+    repo = InMemoryItemRepository()
+    await _add(repo, price=100, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
+    await _add(repo, price=200, status=ItemStatus.RECEIVED, payment=PaymentType.POSTPAID)
+    await _add(repo, price=None, status=ItemStatus.RECEIVED, payment=PaymentType.PREPAID)
+    await _add(repo, price=999, status=ItemStatus.CANCELLED, payment=PaymentType.PREPAID)
+    await _add(repo, price=888, status=ItemStatus.NEW, payment=PaymentType.PREPAID)
+    summary = await CalcDebtUseCase(repo, InMemoryManualDebtRepository()).execute()
+    assert summary.debt.count + summary.pending.count == 2
+    assert summary.unpriced_count == 1
+    # 2 bucketed + 1 unpriced = the 3 in-work items; cancelled/new excluded.
+    assert summary.debt.count + summary.pending.count + summary.unpriced_count == 3
 
 
 async def test_manual_debt_adds_to_total() -> None:
@@ -88,7 +127,7 @@ async def test_manual_debt_adds_to_total() -> None:
     manual = InMemoryManualDebtRepository(amount_kop=50000)
     await _add(repo, price=100000, status=ItemStatus.ORDERED, payment=PaymentType.PREPAID)
     summary = await CalcDebtUseCase(repo, manual).execute()
-    assert summary.debt_kop == 100000
+    assert summary.debt.amount_kop == 100000
     assert summary.manual_kop == 50000
     assert summary.total_kop == 150000
 

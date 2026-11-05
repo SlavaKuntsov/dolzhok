@@ -47,15 +47,23 @@ A non-negative amount held in kopecks (minor units), displayed as roubles like `
 _Avoid_: amount, value, price
 
 **Debt**:
-Money the customer owes the executor: items the executor already fronted (every prepaid item in work, plus every postpaid item that was received) plus the manual debt. Shown as «Долг» to the customer and split into «Уже оплачено за товары» + «Долги за прошлое» to the executor.
+Money the customer owes the executor: items the executor already fronted (every prepaid item in work, plus every postpaid item that was received) plus the manual debt. Shown as «Долг» to the customer and split into «Долг за товары» + «Долги за прошлое» to the executor.
 _Avoid_: total, amount owed, balance, sum
+
+**Debt bucket**:
+One of the four `payment type × receipt status` combinations an in-work item can fall into (`prepaid_ordered`, `prepaid_received`, `postpaid_received`, `postpaid_ordered`). Every in-work item lands in exactly one, so no combination can drop out of the summary.
+_Avoid_: category, group, segment
+
+**Unpriced work item**:
+An item in work (`ordered`/`received`) that carries no money — no price yet, or a zero line total. Shown as «⚠️ Без цены» rather than silently dropped from the summary.
+_Avoid_: free item, missing item, zero item
 
 **Manual debt**:
 Money from past orders that were never tracked as items, entered by hand as one running figure. It is signed: negative means the customer overpaid on past debt. It counts in the debt but is not an Item and never appears in the item list.
 _Avoid_: item, old order, extra debt, adjustment
 
 **Pending postpaid**:
-A postpaid item that is ordered but not received yet — the customer will pay on receipt. Explicitly not part of the debt until it arrives. Shown as «Будет оплачено при получении».
+A postpaid item that is ordered but not received yet — the customer will pay on receipt. Explicitly not part of the debt until it arrives. Shown as «Ещё не долг, оплачу при получении».
 _Avoid_: debt, unpaid, outstanding
 
 **Repayment**:

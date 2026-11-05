@@ -11,7 +11,7 @@ from src.adapters.telegram.payments import (
 )
 from src.domain.entities import Repayment
 from src.use_cases.calc_balance import CalcBalanceResponse
-from src.use_cases.calc_debt import CalcDebtResponse
+from src.use_cases.calc_debt import CalcDebtResponse, MoneyCount
 from src.use_cases.list_repayments import ListRepaymentsResponse
 
 _WHEN = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
@@ -23,183 +23,203 @@ def _repayment(id_: int, amount: int, *, note: str | None = None, by: int = 9) -
 
 def _debt(
     *,
-    prepaid: int = 0,
-    prepaid_count: int | None = None,
-    postpaid: int = 0,
-    postpaid_count: int | None = None,
-    pending: int = 0,
-    pending_count: int | None = None,
+    prepaid_received: int = 0,
+    prepaid_received_count: int | None = None,
+    prepaid_ordered: int = 0,
+    prepaid_ordered_count: int | None = None,
+    postpaid_received: int = 0,
+    postpaid_received_count: int | None = None,
+    postpaid_ordered: int = 0,
+    postpaid_ordered_count: int | None = None,
     manual_kop: int = 0,
+    unpriced_count: int = 0,
 ) -> CalcDebtResponse:
+    def mc(amount: int, count: int | None) -> MoneyCount:
+        return MoneyCount(amount, count if count is not None else (1 if amount else 0))
+
     return CalcDebtResponse(
-        debt_prepaid_kop=prepaid,
-        debt_prepaid_count=prepaid_count if prepaid_count is not None else (1 if prepaid else 0),
-        debt_postpaid_kop=postpaid,
-        debt_postpaid_count=postpaid_count
-        if postpaid_count is not None
-        else (1 if postpaid else 0),
-        pending_kop=pending,
-        pending_count=pending_count if pending_count is not None else (1 if pending else 0),
+        prepaid_received=mc(prepaid_received, prepaid_received_count),
+        prepaid_ordered=mc(prepaid_ordered, prepaid_ordered_count),
+        postpaid_received=mc(postpaid_received, postpaid_received_count),
+        postpaid_ordered=mc(postpaid_ordered, postpaid_ordered_count),
         manual_kop=manual_kop,
+        unpriced_count=unpriced_count,
     )
 
 
 def _balance(
+    debt: CalcDebtResponse | None = None,
     *,
-    prepaid: int = 0,
-    prepaid_count: int | None = None,
-    postpaid: int = 0,
-    postpaid_count: int | None = None,
-    manual_kop: int = 0,
     repaid_kop: int = 0,
+    repaid_count: int = 0,
 ) -> CalcBalanceResponse:
-    prepaid_count = prepaid_count if prepaid_count is not None else (1 if prepaid else 0)
-    postpaid_count = postpaid_count if postpaid_count is not None else (1 if postpaid else 0)
-    total = prepaid + postpaid + manual_kop
-    balance = total - repaid_kop
     return CalcBalanceResponse(
-        debt_prepaid_kop=prepaid,
-        debt_prepaid_count=prepaid_count,
-        debt_postpaid_kop=postpaid,
-        debt_postpaid_count=postpaid_count,
-        manual_kop=manual_kop,
-        total_kop=total,
-        balance_kop=balance,
-        advance_kop=max(0, -balance),
+        debt=debt or _debt(),
+        repaid_kop=repaid_kop,
+        repaid_count=repaid_count,
     )
 
 
-def test_debt_text_executor_shows_split_and_remaining() -> None:
-    """Executor sees what is already paid, split by payment type, plus the rest."""
+def test_debt_text_executor_explains_every_line() -> None:
+    """Each quantity says what it is: paid-early (in hand vs in transit), on receipt."""
     debt = _debt(
-        prepaid=191527,
-        prepaid_count=9,
-        postpaid=58764,
-        postpaid_count=19,
-        pending=22278,
-        pending_count=10,
+        prepaid_received=72867,
+        prepaid_received_count=6,
+        prepaid_ordered=118660,
+        prepaid_ordered_count=3,
+        postpaid_received=58764,
+        postpaid_received_count=19,
+        postpaid_ordered=22278,
+        postpaid_ordered_count=10,
     )
-    balance = _balance(
-        prepaid=191527,
-        prepaid_count=9,
-        postpaid=58764,
-        postpaid_count=19,
-        repaid_kop=190000,
-    )
-    text = format_debt_text(debt, balance, for_executor=True)
+    text = format_debt_text(_balance(debt, repaid_kop=190000, repaid_count=4), for_executor=True)
     assert text == (
-        "💰 Уже оплачено за товары: 2 502,91 BYN\n"
-        "  • предоплата: 1 915,27 BYN (9 шт)\n"
-        "  • постоплата: 587,64 BYN (19 шт)\n"
+        "💰 Долг за товары: 2 502,91 BYN\n"
+        "  • заплатил заранее: 1 915,27 BYN (9 шт: 6 уже у меня, 3 в пути)\n"
+        "  • заплатил при получении: 587,64 BYN (19 шт)\n"
         "\n"
         "📜 Долги за прошлое: 0,00 BYN\n"
         "\n"
-        "⏳ Будет оплачено при получении: 222,78 BYN (10 шт)\n"
+        "⏳ Ещё не долг, оплачу при получении: 222,78 BYN (10 шт)\n"
         "\n"
-        "✅ Остаток: 602,91 BYN"
+        "✅ Остаток: 602,91 BYN\n"
+        "   долг 2 502,91 BYN − погашено 1 900,00 BYN"
     )
 
 
-def test_debt_text_drops_redundant_totals() -> None:
-    """«Итого долг» (gross accrual) and «Погашено» are no longer shown."""
-    debt = _debt(prepaid=259900)
-    balance = _balance(prepaid=259900, repaid_kop=100000)
-    text = format_debt_text(debt, balance, for_executor=True)
-    assert "Итого долг" not in text
-    assert "Погашено" not in text
-    assert "💰 Уже оплачено за товары: 2 599,00 BYN" in text
-    assert "✅ Остаток: 1 599,00 BYN" in text
-    assert "Аванс" not in text
-
-
-def test_debt_text_omits_zero_bullets() -> None:
-    """Nothing paid yet → no empty prepaid/postpaid bullets under the total."""
-    debt = _debt()
-    balance = _balance()
-    text = format_debt_text(debt, balance, for_executor=True)
-    assert "постоплата" not in text
-    assert "предоплата" not in text
-    assert "💰 Уже оплачено за товары: 0,00 BYN" in text
+def test_debt_text_balance_shows_arithmetic() -> None:
+    """The remaining line carries the subtraction that produced it."""
+    debt = _debt(prepaid_received=100000)
+    text = format_debt_text(_balance(debt, repaid_kop=40000, repaid_count=1), for_executor=True)
+    assert "✅ Остаток: 600,00 BYN" in text
+    assert "долг 1 000,00 BYN − погашено 400,00 BYN" in text
 
 
 def test_debt_text_pending_is_not_in_remaining() -> None:
     """Pending postpaid is money not yet owed, so it stays out of the balance."""
-    debt = _debt(prepaid=100000, pending=70000)
-    balance = _balance(prepaid=100000)
-    text = format_debt_text(debt, balance, for_executor=True)
-    assert "⏳ Будет оплачено при получении: 700,00 BYN (1 шт)" in text
+    debt = _debt(prepaid_received=100000, postpaid_ordered=70000)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "⏳ Ещё не долг, оплачу при получении: 700,00 BYN (1 шт)" in text
     assert "✅ Остаток: 1 000,00 BYN" in text
 
 
+def test_debt_text_flags_unpriced_work_items() -> None:
+    """An in-work item with no price is announced, not silently dropped."""
+    debt = _debt(prepaid_received=100000, unpriced_count=2)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "⚠️ Без цены: 2 шт — в долг не входят" in text
+
+
+def test_debt_text_explains_manual_debt_arithmetic() -> None:
+    """Story 3: the remaining line is explained even with no repayments."""
+    debt = _debt(prepaid_received=100000, manual_kop=50000)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "✅ Остаток: 1 500,00 BYN" in text
+    assert "долг 1 500,00 BYN − погашено 0,00 BYN" in text
+
+
+def test_debt_text_customer_full_text() -> None:
+    """Story 5: the customer's whole summary, not just fragments."""
+    debt = _debt(prepaid_received=100000, postpaid_received=50000, manual_kop=50000)
+    text = format_debt_text(_balance(debt, repaid_kop=20000, repaid_count=1), for_executor=False)
+    assert text == ("💰 Долг: 2 000,00 BYN\n\n✅ Остаток: 1 800,00 BYN")
+
+
+def test_debt_text_zero_amount_bucket_is_not_invisible() -> None:
+    """A zero line total must not print a header without a reconciling bullet.
+
+    A price=0 item used to become MoneyCount(0, 1): the header printed
+    «0,00 BYN» while the bucket bullet was gated on count and the pending block
+    on amount, so no line explained the item.
+    """
+    debt = _debt(postpaid_ordered=0, postpaid_ordered_count=1)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "0,00 BYN (1 шт)" not in text
+    assert "оплачу при получении" not in text
+
+
+def test_money_count_addition_keeps_amount_with_count() -> None:
+    """Story 6: amount and count can never drift apart."""
+    assert MoneyCount(100, 1) + MoneyCount(250, 2) == MoneyCount(350, 3)
+
+
+def test_debt_text_omits_zero_lines() -> None:
+    """Nothing paid and nothing pending → no empty bullets or blocks."""
+    text = format_debt_text(_balance(), for_executor=True)
+    assert "заплатил заранее" not in text
+    assert "заплатил при получении" not in text
+    assert "оплачу при получении" not in text
+    assert "💰 Долг за товары: 0,00 BYN" in text
+
+
 def test_debt_text_adds_manual_debt() -> None:
-    debt = _debt(prepaid=100000, manual_kop=50000)
-    balance = _balance(prepaid=100000, manual_kop=50000)
-    text = format_debt_text(debt, balance, for_executor=True)
+    debt = _debt(prepaid_received=100000, manual_kop=50000)
+    text = format_debt_text(_balance(debt), for_executor=True)
     # The goods header stays the sum of its bullets; past-orders debt is its own line.
-    assert "💰 Уже оплачено за товары: 1 000,00 BYN" in text
+    assert "💰 Долг за товары: 1 000,00 BYN" in text
     assert "📜 Долги за прошлое: 500,00 BYN" in text
     assert "✅ Остаток: 1 500,00 BYN" in text
 
 
 def test_debt_text_negative_manual_debt() -> None:
-    debt = _debt(prepaid=100000, manual_kop=-30000)
-    balance = _balance(prepaid=100000, manual_kop=-30000)
-    text = format_debt_text(debt, balance, for_executor=True)
+    debt = _debt(prepaid_received=100000, manual_kop=-30000)
+    text = format_debt_text(_balance(debt), for_executor=True)
     assert "📜 Долги за прошлое: -300,00 BYN" in text
     assert "✅ Остаток: 700,00 BYN" in text
 
 
 def test_debt_text_customer_sees_total_only() -> None:
-    debt = _debt(prepaid=100000, postpaid=50000, manual_kop=50000)
-    balance = _balance(prepaid=100000, postpaid=50000, manual_kop=50000, repaid_kop=20000)
-    text = format_debt_text(debt, balance, for_executor=False)
+    debt = _debt(prepaid_received=100000, postpaid_received=50000, manual_kop=50000)
+    text = format_debt_text(_balance(debt, repaid_kop=20000, repaid_count=1), for_executor=False)
     assert "💰 Долг: 2 000,00 BYN" in text
-    assert "предоплата" not in text
-    assert "постоплата" not in text
+    assert "заплатил заранее" not in text
+    assert "заплатил при получении" not in text
     assert "Долги за прошлое" not in text
     assert "✅ Остаток: 1 800,00 BYN" in text
 
 
 def test_debt_text_overpayment_shows_advance() -> None:
-    debt = _debt(prepaid=100000)
-    balance = _balance(prepaid=100000, repaid_kop=150000)
-    text = format_debt_text(debt, balance, for_executor=True)
+    debt = _debt(prepaid_received=100000)
+    text = format_debt_text(_balance(debt, repaid_kop=150000, repaid_count=1), for_executor=True)
     assert "✅ Остаток: 0,00 BYN" in text
     assert "🎁 Аванс: 500,00 BYN" in text
     assert "-500" not in text
 
 
 def test_debt_text_executor_layout_with_advance() -> None:
-    debt = _debt(prepaid=72867, prepaid_count=6, pending=16231, pending_count=8)
-    balance = _balance(prepaid=72867, prepaid_count=6, repaid_kop=75000)
-    text = format_debt_text(debt, balance, for_executor=True)
+    debt = _debt(
+        prepaid_received=72867,
+        prepaid_received_count=6,
+        postpaid_ordered=16231,
+        postpaid_ordered_count=8,
+    )
+    text = format_debt_text(_balance(debt, repaid_kop=75000, repaid_count=3), for_executor=True)
     assert text == (
-        "💰 Уже оплачено за товары: 728,67 BYN\n"
-        "  • предоплата: 728,67 BYN (6 шт)\n"
+        "💰 Долг за товары: 728,67 BYN\n"
+        "  • заплатил заранее: 728,67 BYN (6 шт: 6 уже у меня)\n"
         "\n"
         "📜 Долги за прошлое: 0,00 BYN\n"
         "\n"
-        "⏳ Будет оплачено при получении: 162,31 BYN (8 шт)\n"
+        "⏳ Ещё не долг, оплачу при получении: 162,31 BYN (8 шт)\n"
         "\n"
         "✅ Остаток: 0,00 BYN\n"
-        "🎁 Аванс: 21,33 BYN"
+        "🎁 Аванс: 21,33 BYN\n"
+        "   долг 728,67 BYN − погашено 750,00 BYN"
     )
 
 
 def test_debt_text_pending_only_still_shows_pending() -> None:
-    debt = _debt(pending=70000)
-    balance = _balance()
-    text = format_debt_text(debt, balance, for_executor=True)
-    assert "⏳ Будет оплачено при получении: 700,00 BYN (1 шт)" in text
+    debt = _debt(postpaid_ordered=70000)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "⏳ Ещё не долг, оплачу при получении: 700,00 BYN (1 шт)" in text
     assert "Остаток" not in text
 
 
 def test_debt_text_omits_zero_priced_pending_line() -> None:
     """A zero-priced pending item prints no line — zero sums stay out (story 8)."""
-    debt = _debt(pending=0, pending_count=1)
-    balance = _balance()
-    text = format_debt_text(debt, balance, for_executor=True)
-    assert "Будет оплачено" not in text
+    debt = _debt(postpaid_ordered=0, postpaid_ordered_count=1)
+    text = format_debt_text(_balance(debt), for_executor=True)
+    assert "оплачу при получении" not in text
 
 
 def _response(*repayments: Repayment) -> ListRepaymentsResponse:

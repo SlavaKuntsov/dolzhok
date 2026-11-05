@@ -14,7 +14,6 @@ from src.domain.entities import Repayment
 from src.domain.interfaces import IItemRepository, IManualDebtRepository, IRepaymentRepository
 from src.domain.value_objects import Money, format_signed_rub
 from src.use_cases.calc_balance import CalcBalanceResponse, CalcBalanceUseCase
-from src.use_cases.calc_debt import CalcDebtResponse, CalcDebtUseCase
 from src.use_cases.list_repayments import ListRepaymentsResponse
 
 
@@ -27,50 +26,73 @@ def _signed_money(kop: int) -> str:
     return format_signed_rub(kop)
 
 
-def format_debt_text(
-    debt: CalcDebtResponse, balance: CalcBalanceResponse, *, for_executor: bool
-) -> str:
-    """Debt summary: what is already paid (by payment type), pending, and the rest.
+def _pieces(parts: list[tuple[str, int]]) -> str:
+    """Render ``[("уже у меня", 6), ("в пути", 3)]`` as ``6 уже у меня, 3 в пути``."""
+    return ", ".join(f"{count} {label}" for label, count in parts if count)
 
-    Only work-in-progress money is shown, split by how it settles: the executor
-    sees what they already fronted (debt) broken down into prepaid and received
-    postpaid, plus what is still on its way (pending postpaid, not owed yet).
-    The gross accrual and the repaid ledger are deliberately absent — the
-    running balance is the only total that answers "how much is left".
+
+def format_debt_text(balance: CalcBalanceResponse, *, for_executor: bool) -> str:
+    """Debt summary: what is already paid, what is not owed yet, what is left.
+
+    Every quantity carries its own explanation, because the same kopecks mean
+    different things on different lines: the executor sees what they fronted
+    (debt) split by how it was paid — and, within the prepaid part, how much is
+    already in hand versus still in transit — then what is not debt yet, then
+    the running balance with the arithmetic that produced it. Work items
+    without a price are called out: dropping them silently is the bug this
+    summary exists to prevent.
     """
-    paid = []
+    debt = balance.debt
+    head = []
     if for_executor:
-        paid.append(f"💰 Уже оплачено за товары: {_money(balance.debt_kop)}")
-        if balance.debt_prepaid_kop:
-            paid.append(
-                f"  • предоплата: {_money(balance.debt_prepaid_kop)} "
-                f"({balance.debt_prepaid_count} шт)"
+        head.append(f"💰 Долг за товары: {_money(debt.debt.amount_kop)}")
+        prepaid = debt.debt_prepaid
+        if prepaid.amount_kop:
+            detail = _pieces(
+                [
+                    ("уже у меня", debt.prepaid_received.count),
+                    ("в пути", debt.prepaid_ordered.count),
+                ]
             )
-        if balance.debt_postpaid_kop:
-            paid.append(
-                f"  • постоплата: {_money(balance.debt_postpaid_kop)} "
-                f"({balance.debt_postpaid_count} шт)"
+            head.append(
+                f"  • заплатил заранее: {_money(prepaid.amount_kop)} ({prepaid.count} шт: {detail})"
+            )
+        postpaid = debt.debt_postpaid
+        if postpaid.amount_kop:
+            head.append(
+                f"  • заплатил при получении: {_money(postpaid.amount_kop)} ({postpaid.count} шт)"
             )
     else:
-        paid.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
+        head.append(f"💰 Долг: {_signed_money(balance.total_kop)}")
 
     pending = []
-    if debt.pending_kop:
+    if debt.pending.amount_kop:
         pending.append(
-            f"⏳ Будет оплачено при получении: {_money(debt.pending_kop)} ({debt.pending_count} шт)"
+            f"⏳ Ещё не долг, оплачу при получении: {_money(debt.pending.amount_kop)} "
+            f"({debt.pending.count} шт)"
         )
+
+    unpriced = []
+    if debt.unpriced_count:
+        unpriced.append(f"⚠️ Без цены: {debt.unpriced_count} шт — в долг не входят")
 
     remaining = []
     if balance.advance_kop:
         remaining.append("✅ Остаток: 0,00 BYN")
         remaining.append(f"🎁 Аванс: {_money(balance.advance_kop)}")
-    elif balance.total_kop or balance.debt_count or balance.manual_kop:
+    elif balance.total_kop or debt.debt.count or debt.manual_kop:
         remaining.append(f"✅ Остаток: {_signed_money(balance.balance_kop)}")
+    if remaining and for_executor and (balance.repaid_count or debt.manual_kop):
+        # Show the subtraction whenever the remaining figure is not just the
+        # goods total — repayments and/or the past-orders line are in play.
+        remaining.append(
+            f"   долг {_money(balance.total_kop)} − погашено {_money(balance.repaid_kop)}"
+        )
 
-    blocks = [paid]
+    blocks = [head]
     if for_executor:
-        blocks.append([f"📜 Долги за прошлое: {_signed_money(balance.manual_kop)}"])
-    blocks += [block for block in (pending, remaining) if block]
+        blocks.append([f"📜 Долги за прошлое: {_signed_money(debt.manual_kop)}"])
+    blocks += [block for block in (pending, unpriced, remaining) if block]
     return "\n\n".join("\n".join(block) for block in blocks)
 
 
@@ -83,10 +105,9 @@ async def send_debt(
     for_executor: bool,
 ) -> None:
     """Render the debt summary + the debt submenu keyboard."""
-    debt = await CalcDebtUseCase(item_repo, manual_repo).execute()
     balance = await CalcBalanceUseCase(item_repo, repayment_repo, manual_repo).execute()
     await message.answer(
-        format_debt_text(debt, balance, for_executor=for_executor),
+        format_debt_text(balance, for_executor=for_executor),
         reply_markup=debt_menu_keyboard(for_executor=for_executor),
     )
 

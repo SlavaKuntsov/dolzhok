@@ -12,42 +12,64 @@ WORK_STATUSES: frozenset[ItemStatus] = frozenset({ItemStatus.ORDERED, ItemStatus
 
 
 @dataclass(frozen=True)
-class CalcDebtResponse:
-    """Item-side money split by how it is (or will be) settled.
+class MoneyCount:
+    """An amount in kopecks together with the number of items behind it."""
 
-    `debt_*` is what the executor already fronted and the customer therefore
-    owes: every prepaid item in work plus every postpaid item that was received.
-    `pending_*` is postpaid and still on its way — not owed until it arrives.
+    amount_kop: int = 0
+    count: int = 0
+
+    def __add__(self, other: MoneyCount) -> MoneyCount:
+        return MoneyCount(self.amount_kop + other.amount_kop, self.count + other.count)
+
+
+@dataclass(frozen=True)
+class CalcDebtResponse:
+    """Item-side money as the four atomic buckets the summary renders.
+
+    Buckets are `(payment type × receipt status)` so every in-work item that
+    carries money lands in exactly one of them — the classification has no gap.
+    Derived views: `debt` is what the executor already fronted (anything
+    prepaid, plus postpaid that arrived), `pending` is postpaid still on its way
+    and therefore not owed. `unpriced_count` counts in-work items that carry no
+    money — no price, or a zero line total — because those are surfaced
+    separately instead of being dropped silently.
     """
 
-    debt_prepaid_kop: int
-    debt_prepaid_count: int
-    debt_postpaid_kop: int
-    debt_postpaid_count: int
-    pending_kop: int
-    pending_count: int
-    manual_kop: int
+    prepaid_ordered: MoneyCount = MoneyCount()
+    prepaid_received: MoneyCount = MoneyCount()
+    postpaid_received: MoneyCount = MoneyCount()
+    postpaid_ordered: MoneyCount = MoneyCount()
+    manual_kop: int = 0
+    unpriced_count: int = 0
 
     @property
-    def debt_kop(self) -> int:
+    def debt_prepaid(self) -> MoneyCount:
+        return self.prepaid_ordered + self.prepaid_received
+
+    @property
+    def debt_postpaid(self) -> MoneyCount:
+        return self.postpaid_received
+
+    @property
+    def debt(self) -> MoneyCount:
         """Everything the executor already paid for."""
-        return self.debt_prepaid_kop + self.debt_postpaid_kop
+        return self.debt_prepaid + self.debt_postpaid
 
     @property
-    def debt_count(self) -> int:
-        return self.debt_prepaid_count + self.debt_postpaid_count
+    def pending(self) -> MoneyCount:
+        return self.postpaid_ordered
 
     @property
     def total_kop(self) -> int:
         """Items debt plus the manually entered past-orders figure."""
-        return self.debt_kop + self.manual_kop
+        return self.debt.amount_kop + self.manual_kop
 
 
 class CalcDebtUseCase:
     """Debt is what the executor already fronted; pending postpaid is not debt.
 
     A postpaid item becomes debt the moment it is received (the executor paid
-    Ozon to collect it), which is why RECEIVED+POSTPAID counts here. Only an
+    Ozon to collect it), which is why received postpaid counts here. Only an
     ordered-and-postpaid item is still pending. The past-orders figure is added
     on top and may be negative (overpayment).
     """
@@ -57,29 +79,30 @@ class CalcDebtUseCase:
         self._manual = manual_repo
 
     async def execute(self) -> CalcDebtResponse:
-        debt_prepaid_kop = debt_prepaid_count = 0
-        debt_postpaid_kop = debt_postpaid_count = 0
-        pending_kop = pending_count = 0
+        buckets = {
+            (PaymentType.PREPAID, ItemStatus.ORDERED): MoneyCount(),
+            (PaymentType.PREPAID, ItemStatus.RECEIVED): MoneyCount(),
+            (PaymentType.POSTPAID, ItemStatus.RECEIVED): MoneyCount(),
+            (PaymentType.POSTPAID, ItemStatus.ORDERED): MoneyCount(),
+        }
+        unpriced_count = 0
         for item in await self._repo.list_all():
-            total = item.total_kop
-            if total is None or item.status not in WORK_STATUSES:
+            if item.status not in WORK_STATUSES:
                 continue
-            if item.payment is PaymentType.PREPAID:
-                debt_prepaid_kop += total
-                debt_prepaid_count += 1
-            elif item.status is ItemStatus.RECEIVED:
-                debt_postpaid_kop += total
-                debt_postpaid_count += 1
-            else:
-                pending_kop += total
-                pending_count += 1
+            total = item.total_kop
+            if not total:
+                # No price, or a zero line total: the item carries no money, so
+                # it would only ever print as an invisible "0,00 BYN (1 шт)".
+                unpriced_count += 1
+                continue
+            key = (item.payment, item.status)
+            buckets[key] = buckets[key] + MoneyCount(total, 1)
         manual = await self._manual.get()
         return CalcDebtResponse(
-            debt_prepaid_kop=debt_prepaid_kop,
-            debt_prepaid_count=debt_prepaid_count,
-            debt_postpaid_kop=debt_postpaid_kop,
-            debt_postpaid_count=debt_postpaid_count,
-            pending_kop=pending_kop,
-            pending_count=pending_count,
+            prepaid_ordered=buckets[(PaymentType.PREPAID, ItemStatus.ORDERED)],
+            prepaid_received=buckets[(PaymentType.PREPAID, ItemStatus.RECEIVED)],
+            postpaid_received=buckets[(PaymentType.POSTPAID, ItemStatus.RECEIVED)],
+            postpaid_ordered=buckets[(PaymentType.POSTPAID, ItemStatus.ORDERED)],
             manual_kop=manual.amount_kop,
+            unpriced_count=unpriced_count,
         )
